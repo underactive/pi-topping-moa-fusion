@@ -1,0 +1,543 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family='ui-monospace, &quot;SF Mono&quot;, Menlo, Monaco, monospace' role="img" aria-label="The /mf-plan mixture-of-agents workflow: a prompt fans out to up to five read-only proposer models, a synthesizer reconciles their plans into one, the human approves or loops back to refine (up to five rounds), an implementer builds in-session, and a verifier judges the result — passing, or looping findings back to the implementer for up to two repair rounds">
+  <style>
+    .pop, .ring, .pulse { transform-box: fill-box; transform-origin: center; }
+
+    /* ---------- loop-back marching dashes ---------- */
+    .march { animation: march 1.2s linear infinite; }
+    @keyframes march { to { stroke-dashoffset: -18; } }
+
+    /* ---------- prompt ---------- */
+    .promptCore { animation: promptCore 18s ease-in-out infinite; }
+    @keyframes promptCore {
+      0%, 100% { transform: scale(1); }
+      1.5%     { transform: scale(1.16); }
+      5%       { transform: scale(1); }
+    }
+    .promptRing { animation: promptRing 18s ease-out infinite; }
+    @keyframes promptRing {
+      0%       { opacity: 0.9; transform: scale(1); }
+      7%, 100% { opacity: 0;   transform: scale(2.1); }
+    }
+
+    /* ---------- fan-out ---------- */
+    .fanGlow { animation: fanGlow 18s linear infinite; }
+    @keyframes fanGlow {
+      0%, 1.5%  { opacity: 0; }
+      4%        { opacity: 0.85; }
+      8%        { opacity: 0.85; }
+      11%, 100% { opacity: 0; }
+    }
+    .dotA { animation: dotA 18s linear infinite; }
+    @keyframes dotA {
+      0%, 3%     { transform: translate(250px, 590px); opacity: 0; }
+      4.5%       { opacity: 1; }
+      8%         { transform: translate(393px, 220px); opacity: 1; }
+      9.5%, 100% { transform: translate(393px, 220px); opacity: 0; }
+    }
+    .dotB { animation: dotB 18s linear infinite; }
+    @keyframes dotB {
+      0%, 3%     { transform: translate(250px, 590px); opacity: 0; }
+      4.5%       { opacity: 1; }
+      8%         { transform: translate(393px, 405px); opacity: 1; }
+      9.5%, 100% { transform: translate(393px, 405px); opacity: 0; }
+    }
+    .dotC { animation: dotC 18s linear infinite; }
+    @keyframes dotC {
+      0%, 3%     { transform: translate(250px, 590px); opacity: 0; }
+      4.5%       { opacity: 1; }
+      8%         { transform: translate(393px, 590px); opacity: 1; }
+      9.5%, 100% { transform: translate(393px, 590px); opacity: 0; }
+    }
+    .dotD { animation: dotD 18s linear infinite; }
+    @keyframes dotD {
+      0%, 3%     { transform: translate(250px, 590px); opacity: 0; }
+      4.5%       { opacity: 1; }
+      8%         { transform: translate(393px, 775px); opacity: 1; }
+      9.5%, 100% { transform: translate(393px, 775px); opacity: 0; }
+    }
+    .dotE { animation: dotE 18s linear infinite; }
+    @keyframes dotE {
+      0%, 3%     { transform: translate(250px, 590px); opacity: 0; }
+      4.5%       { opacity: 1; }
+      8%         { transform: translate(393px, 960px); opacity: 1; }
+      9.5%, 100% { transform: translate(393px, 960px); opacity: 0; }
+    }
+
+    /* ---------- proposers working ---------- */
+    .glowP { animation: glowP 18s ease-in-out infinite; }
+    @keyframes glowP {
+      0%, 7%    { opacity: 0; }
+      10%       { opacity: 1; }
+      14%       { opacity: 0.85; }
+      17%       { opacity: 1; }
+      19%, 100% { opacity: 0; }
+    }
+    .ringA { animation: ringA 18s linear infinite; }
+    @keyframes ringA {
+      0%, 8%    { transform: scale(0.2); opacity: 0; }
+      10%       { opacity: 0.9; }
+      15%, 100% { transform: scale(1.9); opacity: 0; }
+    }
+    .ringB { animation: ringB 18s linear infinite; }
+    @keyframes ringB {
+      0%, 9.5%    { transform: scale(0.2); opacity: 0; }
+      11.5%       { opacity: 0.9; }
+      16.5%, 100% { transform: scale(1.9); opacity: 0; }
+    }
+    .ringC { animation: ringC 18s linear infinite; }
+    @keyframes ringC {
+      0%, 11%   { transform: scale(0.2); opacity: 0; }
+      13%       { opacity: 0.9; }
+      18%, 100% { transform: scale(1.9); opacity: 0; }
+    }
+    .ringD { animation: ringD 18s linear infinite; }
+    @keyframes ringD {
+      0%, 12.5% { transform: scale(0.2); opacity: 0; }
+      14.5%     { opacity: 0.9; }
+      19.5%, 100% { transform: scale(1.9); opacity: 0; }
+    }
+    .ringE { animation: ringE 18s linear infinite; }
+    @keyframes ringE {
+      0%, 14%   { transform: scale(0.2); opacity: 0; }
+      16%       { opacity: 0.9; }
+      21%, 100% { transform: scale(1.9); opacity: 0; }
+    }
+
+    /* ---------- proposal cards converge ---------- */
+    .cardA { animation: cardA 18s ease-in-out infinite; }
+    @keyframes cardA {
+      0%, 15%   { transform: translate(0, 0); opacity: 0; }
+      16.5%     { transform: translate(0, 0); opacity: 1; }
+      21.5%     { transform: translate(94px, 370px); opacity: 1; }
+      23%, 100% { transform: translate(94px, 370px); opacity: 0; }
+    }
+    .cardB { animation: cardB 18s ease-in-out infinite; }
+    @keyframes cardB {
+      0%, 15%   { transform: translate(0, 0); opacity: 0; }
+      16.5%     { transform: translate(0, 0); opacity: 1; }
+      21.5%     { transform: translate(94px, 185px); opacity: 1; }
+      23%, 100% { transform: translate(94px, 185px); opacity: 0; }
+    }
+    .cardC { animation: cardC 18s ease-in-out infinite; }
+    @keyframes cardC {
+      0%, 15%   { transform: translate(0, 0); opacity: 0; }
+      16.5%     { transform: translate(0, 0); opacity: 1; }
+      21.5%     { transform: translate(94px, 0); opacity: 1; }
+      23%, 100% { transform: translate(94px, 0); opacity: 0; }
+    }
+    .cardD { animation: cardD 18s ease-in-out infinite; }
+    @keyframes cardD {
+      0%, 15%   { transform: translate(0, 0); opacity: 0; }
+      16.5%     { transform: translate(0, 0); opacity: 1; }
+      21.5%     { transform: translate(94px, -185px); opacity: 1; }
+      23%, 100% { transform: translate(94px, -185px); opacity: 0; }
+    }
+    .cardE { animation: cardE 18s ease-in-out infinite; }
+    @keyframes cardE {
+      0%, 15%   { transform: translate(0, 0); opacity: 0; }
+      16.5%     { transform: translate(0, 0); opacity: 1; }
+      21.5%     { transform: translate(94px, -370px); opacity: 1; }
+      23%, 100% { transform: translate(94px, -370px); opacity: 0; }
+    }
+
+    /* ---------- synthesizer: first pass + re-synthesis after feedback ---------- */
+    .glowSyn { animation: glowSyn 18s ease-in-out infinite; }
+    @keyframes glowSyn {
+      0%, 20%   { opacity: 0; }
+      23%       { opacity: 1; }
+      26%       { opacity: 0.6; }
+      29%       { opacity: 1; }
+      32%       { opacity: 0; }
+      43%       { opacity: 0; }
+      46%       { opacity: 1; }
+      49%       { opacity: 0.9; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* ---------- plan tokens toward approval ---------- */
+    .tok1 { animation: tok1 18s linear infinite; }
+    @keyframes tok1 {
+      0%, 30%     { transform: translate(985px, 590px); opacity: 0; }
+      31.5%       { opacity: 1; }
+      34%         { transform: translate(1065px, 590px); opacity: 1; }
+      35.5%, 100% { transform: translate(1065px, 590px); opacity: 0; }
+    }
+    .tok2 { animation: tok2 18s linear infinite; }
+    @keyframes tok2 {
+      0%, 49.5% { transform: translate(985px, 590px); opacity: 0; }
+      51%       { opacity: 1; }
+      53.5%     { transform: translate(1065px, 590px); opacity: 1; }
+      55%, 100% { transform: translate(1065px, 590px); opacity: 0; }
+    }
+
+    /* ---------- human approval ---------- */
+    .glowApp { animation: glowApp 18s ease-in-out infinite; }
+    @keyframes glowApp {
+      0%, 33%   { opacity: 0; }
+      35.5%     { opacity: 1; }
+      38%       { opacity: 0.85; }
+      40%       { opacity: 0; }
+      49%       { opacity: 0; }
+      51.5%     { opacity: 1; }
+      54%       { opacity: 0.9; }
+      56%, 100% { opacity: 0; }
+    }
+    .chipConflict { animation: chipConflict 18s ease-out infinite; }
+    @keyframes chipConflict {
+      0%, 34%   { opacity: 0; transform: scale(0.8); }
+      36%       { opacity: 1; transform: scale(1.1); }
+      37.5%     { opacity: 1; transform: scale(1); }
+      44%       { opacity: 1; transform: scale(1); }
+      47%, 100% { opacity: 0; transform: scale(1); }
+    }
+    .badgeApproved { animation: badgeApproved 18s ease-out infinite; }
+    @keyframes badgeApproved {
+      0%, 54%     { opacity: 0; transform: scale(0); }
+      56%         { opacity: 1; transform: scale(1.25); }
+      57.5%       { opacity: 1; transform: scale(1); }
+      97%         { opacity: 1; transform: scale(1); }
+      99.5%, 100% { opacity: 0; transform: scale(1); }
+    }
+
+    /* ---------- refine loop ghost (approval feedback -> synthesizer) ---------- */
+    .ghoRefine { animation: ghoRefine 18s linear infinite; }
+    @keyframes ghoRefine {
+      0%, 38%   { transform: translate(1150px, 668px); opacity: 0; }
+      40%       { transform: translate(1150px, 668px); opacity: 1; }
+      41.5%     { transform: translate(1101px, 742px); opacity: 1; }
+      43%       { transform: translate(1020px, 760px); opacity: 1; }
+      44.5%     { transform: translate(939px, 742px); opacity: 1; }
+      46%       { transform: translate(890px, 672px); opacity: 1; }
+      48%, 100% { transform: translate(890px, 672px); opacity: 0; }
+    }
+
+    /* ---------- implement ---------- */
+    .tok3 { animation: tok3 18s linear infinite; }
+    @keyframes tok3 {
+      0%, 56.5%   { transform: translate(1275px, 590px); opacity: 0; }
+      58%         { opacity: 1; }
+      60%         { transform: translate(1355px, 590px); opacity: 1; }
+      61.5%, 100% { transform: translate(1355px, 590px); opacity: 0; }
+    }
+    .glowImp { animation: glowImp 18s ease-in-out infinite; }
+    @keyframes glowImp {
+      0%, 57.5% { opacity: 0; }
+      60%       { opacity: 1; }
+      63%       { opacity: 0.8; }
+      66%       { opacity: 1; }
+      68.5%     { opacity: 0; }
+      80.5%     { opacity: 0; }
+      83%       { opacity: 1; }
+      85%       { opacity: 0.85; }
+      87%, 100% { opacity: 0; }
+    }
+    .penPop { animation: penPop 18s ease-in-out infinite; }
+    @keyframes penPop {
+      0%, 58% { transform: scale(1); }
+      61%     { transform: scale(1.3); }
+      65%     { transform: scale(1); }
+      82%     { transform: scale(1); }
+      84.5%   { transform: scale(1.25); }
+      87%     { transform: scale(1); }
+      100%    { transform: scale(1); }
+    }
+
+    /* ---------- verify: first audit + re-verify after repair ---------- */
+    .tok4 { animation: tok4 18s linear infinite; }
+    @keyframes tok4 {
+      0%, 67%   { transform: translate(1565px, 590px); opacity: 0; }
+      68.5%     { opacity: 1; }
+      70.5%     { transform: translate(1635px, 590px); opacity: 1; }
+      72%, 100% { transform: translate(1635px, 590px); opacity: 0; }
+    }
+    .glowVer { animation: glowVer 18s ease-in-out infinite; }
+    @keyframes glowVer {
+      0%, 69.5% { opacity: 0; }
+      72%       { opacity: 1; }
+      74.5%     { opacity: 0.85; }
+      76.5%     { opacity: 0; }
+      88%       { opacity: 0; }
+      90%       { opacity: 1; }
+      92.5%     { opacity: 1; }
+      94%, 100% { opacity: 0; }
+    }
+
+    /* ---------- repair loop ghost (verifier findings -> implementer) ---------- */
+    .ghoRepair { animation: ghoRepair 18s linear infinite; }
+    @keyframes ghoRepair {
+      0%, 75.5% { transform: translate(1710px, 668px); opacity: 0; }
+      77%       { transform: translate(1710px, 668px); opacity: 1; }
+      78.5%     { transform: translate(1668px, 742px); opacity: 1; }
+      80%       { transform: translate(1600px, 760px); opacity: 1; }
+      81.5%     { transform: translate(1532px, 742px); opacity: 1; }
+      83%       { transform: translate(1490px, 672px); opacity: 1; }
+      85%, 100% { transform: translate(1490px, 672px); opacity: 0; }
+    }
+    .tok5 { animation: tok5 18s linear infinite; }
+    @keyframes tok5 {
+      0%, 86.5% { transform: translate(1565px, 590px); opacity: 0; }
+      87.5%     { opacity: 1; }
+      89%       { transform: translate(1635px, 590px); opacity: 1; }
+      90%, 100% { transform: translate(1635px, 590px); opacity: 0; }
+    }
+
+    /* ---------- final pass ---------- */
+    .passPill { animation: passPill 18s ease-out infinite; }
+    @keyframes passPill {
+      0%, 91.5% { opacity: 0; transform: scale(0.6); }
+      93.5%     { opacity: 1; transform: scale(1.15); }
+      95%       { opacity: 1; transform: scale(1); }
+      99%       { opacity: 1; transform: scale(1); }
+      100%      { opacity: 0; transform: scale(1); }
+    }
+    .glowPass { animation: glowPass 18s ease-in-out infinite; }
+    @keyframes glowPass {
+      0%, 92% { opacity: 0; }
+      95%     { opacity: 0.5; }
+      97%     { opacity: 0.25; }
+      99%, 100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .march, .promptCore, .promptRing, .fanGlow, .dotA, .dotB, .dotC,
+      .glowP, .ringA, .ringB, .ringC, .ringD, .ringE, .cardA, .cardB, .cardC, .cardD, .cardE, .glowSyn,
+      .dotD, .dotE, .tok1, .tok2, .glowApp, .chipConflict, .badgeApproved, .ghoRefine,
+      .tok3, .glowImp, .penPop, .tok4, .glowVer, .ghoRepair, .tok5,
+      .passPill, .glowPass { animation: none; }
+    }
+  </style>
+
+  <!-- background -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B0220"/>
+      <stop offset="55%" stop-color="#17083B"/>
+      <stop offset="100%" stop-color="#050014"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bgGradient)"/>
+
+  <!-- title -->
+  <text x="80" y="92" font-size="54" font-weight="700" fill="#F4E8FF">/mf-plan</text>
+  <text x="80" y="130" font-size="21" fill="#A98BC2">up to 5 models plan independently &#183; one synthesizer reconciles &#183; you approve</text>
+
+  <!-- ======== static wiring ======== -->
+  <!-- fan-out: prompt -> proposers -->
+  <line x1="244" y1="590" x2="400" y2="220" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="244" y1="590" x2="400" y2="405" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="244" y1="590" x2="400" y2="590" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="244" y1="590" x2="400" y2="775" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="244" y1="590" x2="400" y2="960" stroke="#3A1B67" stroke-width="3"/>
+  <line class="fanGlow" x1="244" y1="590" x2="400" y2="220" stroke="#F4E8FF" stroke-width="3"/>
+  <line class="fanGlow" x1="244" y1="590" x2="400" y2="405" stroke="#F4E8FF" stroke-width="3"/>
+  <line class="fanGlow" x1="244" y1="590" x2="400" y2="590" stroke="#F4E8FF" stroke-width="3"/>
+  <line class="fanGlow" x1="244" y1="590" x2="400" y2="775" stroke="#F4E8FF" stroke-width="3"/>
+  <line class="fanGlow" x1="244" y1="590" x2="400" y2="960" stroke="#F4E8FF" stroke-width="3"/>
+
+  <!-- converge: proposers -> synthesizer -->
+  <line x1="590" y1="220" x2="760" y2="530" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="590" y1="405" x2="760" y2="560" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="590" y1="590" x2="760" y2="590" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="590" y1="775" x2="760" y2="620" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="590" y1="960" x2="760" y2="650" stroke="#3A1B67" stroke-width="3"/>
+
+  <!-- main line: synthesize -> approve -> implement -> verify -->
+  <line x1="980" y1="590" x2="1070" y2="590" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="1270" y1="590" x2="1360" y2="590" stroke="#3A1B67" stroke-width="3"/>
+  <line x1="1560" y1="590" x2="1640" y2="590" stroke="#3A1B67" stroke-width="3"/>
+  <path d="M1068 590 l-13,-6.5 v13 z" fill="#8D5CBA"/>
+  <path d="M1358 590 l-13,-6.5 v13 z" fill="#8D5CBA"/>
+  <path d="M1638 590 l-13,-6.5 v13 z" fill="#8D5CBA"/>
+
+  <!-- refine loop: approve -> synthesizer (dashed, always marching) -->
+  <path class="march" d="M1150 668 C 1110 790, 930 790, 890 672" fill="none"
+        stroke="#B026FF" stroke-width="3.5" stroke-dasharray="10 8" opacity="0.75"/>
+  <path transform="translate(890,672) rotate(-109)" d="M0 0 L-16 -7 L-16 7 Z" fill="#B026FF"/>
+  <text x="1020" y="798" font-size="20" font-weight="700" fill="#B026FF" text-anchor="middle">refine &#183; up to 5 rounds</text>
+  <text x="1020" y="824" font-size="15" fill="#A98BC2" text-anchor="middle">your feedback re-synthesizes the plan</text>
+
+  <!-- repair loop: verify -> implement (dashed, always marching) -->
+  <path class="march" d="M1710 668 C 1680 790, 1520 790, 1490 672" fill="none"
+        stroke="#FF2DAA" stroke-width="3.5" stroke-dasharray="10 8" opacity="0.75"/>
+  <path transform="translate(1490,672) rotate(-104)" d="M0 0 L-16 -7 L-16 7 Z" fill="#FF2DAA"/>
+  <text x="1600" y="798" font-size="20" font-weight="700" fill="#FF2DAA" text-anchor="middle">repair &#183; up to 2 rounds</text>
+  <text x="1600" y="824" font-size="15" fill="#A98BC2" text-anchor="middle">findings return to the implementer</text>
+
+  <!-- ======== prompt node ======== -->
+  <circle class="promptRing ring" cx="200" cy="590" r="44" fill="none" stroke="#F4E8FF" stroke-width="3"/>
+  <circle class="promptCore pulse" cx="200" cy="590" r="44" fill="#F4E8FF"/>
+  <text x="200" y="672" font-size="24" font-weight="700" fill="#F4E8FF" text-anchor="middle">PROMPT</text>
+
+  <!-- ======== proposer nodes (read-only) ======== -->
+  <text x="495" y="159" font-size="16" fill="#A98BC2" text-anchor="middle">up to 5 &#183; isolated &#183; read-only</text>
+
+  <g>
+    <rect x="400" y="165" width="190" height="110" rx="16" fill="#160B30" stroke="#FF2DAA" stroke-width="3.5"/>
+    <rect class="glowP" x="400" y="165" width="190" height="110" rx="16" fill="none" stroke="#FF2DAA" stroke-width="7"/>
+    <text x="483" y="231" font-size="22" font-weight="700" fill="#FF2DAA" text-anchor="middle">&#9670; proposer 1</text>
+    <g stroke="#FF2DAA" stroke-width="3" fill="none">
+      <rect x="551" y="185" width="20" height="15" rx="3"/>
+      <path d="M555 185 v-5 a6 6 0 0 1 12 0 v5"/>
+    </g>
+  </g>
+  <g>
+    <rect x="400" y="350" width="190" height="110" rx="16" fill="#160B30" stroke="#B026FF" stroke-width="3.5"/>
+    <rect class="glowP" x="400" y="350" width="190" height="110" rx="16" fill="none" stroke="#B026FF" stroke-width="7"/>
+    <text x="483" y="416" font-size="22" font-weight="700" fill="#B026FF" text-anchor="middle">&#9650; proposer 2</text>
+    <g stroke="#B026FF" stroke-width="3" fill="none">
+      <rect x="551" y="370" width="20" height="15" rx="3"/>
+      <path d="M555 370 v-5 a6 6 0 0 1 12 0 v5"/>
+    </g>
+  </g>
+  <g>
+    <rect x="400" y="535" width="190" height="110" rx="16" fill="#160B30" stroke="#00F0FF" stroke-width="3.5"/>
+    <rect class="glowP" x="400" y="535" width="190" height="110" rx="16" fill="none" stroke="#00F0FF" stroke-width="7"/>
+    <text x="483" y="601" font-size="22" font-weight="700" fill="#00F0FF" text-anchor="middle">&#9679; proposer 3</text>
+    <g stroke="#00F0FF" stroke-width="3" fill="none">
+      <rect x="551" y="555" width="20" height="15" rx="3"/>
+      <path d="M555 555 v-5 a6 6 0 0 1 12 0 v5"/>
+    </g>
+  </g>
+  <g>
+    <rect x="400" y="720" width="190" height="110" rx="16" fill="#160B30" stroke="#FFE66D" stroke-width="3.5"/>
+    <rect class="glowP" x="400" y="720" width="190" height="110" rx="16" fill="none" stroke="#FFE66D" stroke-width="7"/>
+    <text x="483" y="786" font-size="22" font-weight="700" fill="#FFE66D" text-anchor="middle">&#9733; proposer 4</text>
+    <g stroke="#FFE66D" stroke-width="3" fill="none">
+      <rect x="551" y="740" width="20" height="15" rx="3"/>
+      <path d="M555 740 v-5 a6 6 0 0 1 12 0 v5"/>
+    </g>
+  </g>
+  <g>
+    <rect x="400" y="905" width="190" height="110" rx="16" fill="#160B30" stroke="#3D8BFF" stroke-width="3.5"/>
+    <rect class="glowP" x="400" y="905" width="190" height="110" rx="16" fill="none" stroke="#3D8BFF" stroke-width="7"/>
+    <text x="483" y="971" font-size="22" font-weight="700" fill="#3D8BFF" text-anchor="middle">&#10022; proposer 5</text>
+    <g stroke="#3D8BFF" stroke-width="3" fill="none">
+      <rect x="551" y="925" width="20" height="15" rx="3"/>
+      <path d="M555 925 v-5 a6 6 0 0 1 12 0 v5"/>
+    </g>
+  </g>
+
+  <!-- proposer working rings -->
+  <g transform="translate(495,220)"><circle class="ring ringA" r="30" fill="none" stroke="#FF2DAA" stroke-width="4"/></g>
+  <g transform="translate(495,405)"><circle class="ring ringB" r="30" fill="none" stroke="#B026FF" stroke-width="4"/></g>
+  <g transform="translate(495,590)"><circle class="ring ringC" r="30" fill="none" stroke="#00F0FF" stroke-width="4"/></g>
+  <g transform="translate(495,775)"><circle class="ring ringD" r="30" fill="none" stroke="#FFE66D" stroke-width="4"/></g>
+  <g transform="translate(495,960)"><circle class="ring ringE" r="30" fill="none" stroke="#3D8BFF" stroke-width="4"/></g>
+
+  <!-- ======== synthesizer node ======== -->
+  <g>
+    <rect x="760" y="515" width="220" height="150" rx="18" fill="#1B0D38" stroke="#8A5CFF" stroke-width="3.5"/>
+    <rect class="glowSyn" x="760" y="515" width="220" height="150" rx="18" fill="#8A5CFF" fill-opacity="0.14" stroke="#8A5CFF" stroke-width="8"/>
+    <!-- five plans merge into one -->
+    <g stroke-width="3.5" fill="none" stroke-linecap="round">
+      <path d="M832 524 L884 556" stroke="#FF2DAA"/>
+      <path d="M832 540 L884 556" stroke="#B026FF"/>
+      <path d="M832 556 L884 556" stroke="#00F0FF"/>
+      <path d="M832 572 L884 556" stroke="#FFE66D"/>
+      <path d="M832 588 L884 556" stroke="#3D8BFF"/>
+      <path d="M884 556 L910 556" stroke="#F4E8FF" stroke-width="4"/>
+    </g>
+    <text x="870" y="622" font-size="25" font-weight="700" fill="#F4E8FF" text-anchor="middle">SYNTHESIZE</text>
+  </g>
+  <text x="870" y="496" font-size="16" fill="#A98BC2" text-anchor="middle">verifies claims &#183; one plan</text>
+
+  <!-- ======== approval node ======== -->
+  <g>
+    <rect x="1070" y="515" width="200" height="150" rx="18" fill="#1B0D38" stroke="#F4E8FF" stroke-width="3"/>
+    <rect class="glowApp" x="1070" y="515" width="200" height="150" rx="18" fill="#F4E8FF" fill-opacity="0.08" stroke="#F4E8FF" stroke-width="7"/>
+    <circle cx="1170" cy="552" r="13" fill="#F4E8FF"/>
+    <path d="M1146 592 a24 20 0 0 1 48 0 v4 h-48 z" fill="#F4E8FF"/>
+    <text x="1170" y="640" font-size="24" font-weight="700" fill="#F4E8FF" text-anchor="middle">APPROVE</text>
+  </g>
+  <!-- conflicts surface first, then the approved badge lands in the same spot -->
+  <g class="chipConflict pop">
+    <rect x="1085" y="448" width="170" height="44" rx="12" fill="#160B30" stroke="#FFE66D" stroke-width="3"/>
+    <text x="1170" y="477" font-size="19" font-weight="700" fill="#FFE66D" text-anchor="middle">CONFLICTS?</text>
+  </g>
+  <g class="badgeApproved pop">
+    <rect x="1085" y="448" width="170" height="44" rx="12" fill="#160B30" stroke="#72F1B8" stroke-width="3"/>
+    <text x="1170" y="477" font-size="19" font-weight="700" fill="#72F1B8" text-anchor="middle">APPROVED &#10003;</text>
+  </g>
+
+  <!-- ======== implement node ======== -->
+  <g>
+    <rect x="1360" y="515" width="200" height="150" rx="18" fill="#1B0D38" stroke="#FFE66D" stroke-width="3.5"/>
+    <rect class="glowImp" x="1360" y="515" width="200" height="150" rx="18" fill="#FFE66D" fill-opacity="0.10" stroke="#FFE66D" stroke-width="8"/>
+    <!-- pen: the one writer -->
+    <g transform="translate(1460,562)">
+      <g class="penPop pop">
+        <g transform="rotate(-45)" fill="#FFE66D">
+          <rect x="-7" y="-26" width="14" height="34" rx="3"/>
+          <path d="M-7 10 L0 24 L7 10 Z"/>
+        </g>
+      </g>
+    </g>
+    <text x="1460" y="640" font-size="24" font-weight="700" fill="#F4E8FF" text-anchor="middle">IMPLEMENT</text>
+  </g>
+  <text x="1460" y="496" font-size="16" fill="#A98BC2" text-anchor="middle">in your session</text>
+
+  <!-- ======== verify node ======== -->
+  <g>
+    <rect x="1640" y="515" width="190" height="150" rx="18" fill="#1B0D38" stroke="#72F1B8" stroke-width="3.5"/>
+    <rect class="glowVer" x="1640" y="515" width="190" height="150" rx="18" fill="#72F1B8" fill-opacity="0.10" stroke="#72F1B8" stroke-width="8"/>
+    <!-- frozen criteria checklist -->
+    <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M1692 542 l5 5 l9 -10" stroke="#72F1B8" stroke-width="3.5"/>
+      <line x1="1716" y1="542" x2="1772" y2="542" stroke="#A98BC2" stroke-width="3"/>
+      <path d="M1692 566 l5 5 l9 -10" stroke="#72F1B8" stroke-width="3.5"/>
+      <line x1="1716" y1="566" x2="1772" y2="566" stroke="#A98BC2" stroke-width="3"/>
+      <path d="M1692 590 l5 5 l9 -10" stroke="#72F1B8" stroke-width="3.5"/>
+      <line x1="1716" y1="590" x2="1772" y2="590" stroke="#A98BC2" stroke-width="3"/>
+    </g>
+    <text x="1735" y="640" font-size="24" font-weight="700" fill="#F4E8FF" text-anchor="middle">VERIFY</text>
+  </g>
+  <!-- final pass pill -->
+  <rect class="glowPass" x="1644" y="442" width="182" height="56" rx="28" fill="none" stroke="#72F1B8" stroke-width="5" opacity="0"/>
+  <g class="passPill pop">
+    <rect x="1650" y="448" width="170" height="44" rx="22" fill="#102A2B" stroke="#72F1B8" stroke-width="3"/>
+    <text x="1735" y="477" font-size="19" font-weight="700" fill="#72F1B8" text-anchor="middle">PASS &#10003;</text>
+  </g>
+
+  <!-- ======== traveling prompt dots ======== -->
+  <g class="dotA" opacity="0"><circle r="9" fill="#F4E8FF"/></g>
+  <g class="dotB" opacity="0"><circle r="9" fill="#F4E8FF"/></g>
+  <g class="dotC" opacity="0"><circle r="9" fill="#F4E8FF"/></g>
+  <g class="dotD" opacity="0"><circle r="9" fill="#F4E8FF"/></g>
+  <g class="dotE" opacity="0"><circle r="9" fill="#F4E8FF"/></g>
+
+  <!-- ======== proposal cards ======== -->
+  <g class="cardA" opacity="0">
+    <rect x="596" y="192" width="90" height="56" rx="10" fill="#1B0D38" stroke="#FF2DAA" stroke-width="3"/>
+    <text x="641" y="231" font-size="28" font-weight="700" fill="#FF2DAA" text-anchor="middle">&#9670;</text>
+  </g>
+  <g class="cardB" opacity="0">
+    <rect x="596" y="377" width="90" height="56" rx="10" fill="#1B0D38" stroke="#B026FF" stroke-width="3"/>
+    <text x="641" y="416" font-size="28" font-weight="700" fill="#B026FF" text-anchor="middle">&#9650;</text>
+  </g>
+  <g class="cardC" opacity="0">
+    <rect x="596" y="562" width="90" height="56" rx="10" fill="#1B0D38" stroke="#00F0FF" stroke-width="3"/>
+    <text x="641" y="601" font-size="28" font-weight="700" fill="#00F0FF" text-anchor="middle">&#9679;</text>
+  </g>
+  <g class="cardD" opacity="0">
+    <rect x="596" y="747" width="90" height="56" rx="10" fill="#1B0D38" stroke="#FFE66D" stroke-width="3"/>
+    <text x="641" y="786" font-size="28" font-weight="700" fill="#FFE66D" text-anchor="middle">&#9733;</text>
+  </g>
+  <g class="cardE" opacity="0">
+    <rect x="596" y="932" width="90" height="56" rx="10" fill="#1B0D38" stroke="#3D8BFF" stroke-width="3"/>
+    <text x="641" y="971" font-size="28" font-weight="700" fill="#3D8BFF" text-anchor="middle">&#10022;</text>
+  </g>
+
+  <!-- ======== plan tokens ======== -->
+  <g class="tok1" opacity="0"><circle r="22" fill="#F4E8FF" opacity="0.25"/><circle r="12" fill="#F4E8FF"/></g>
+  <g class="tok2" opacity="0"><circle r="22" fill="#F4E8FF" opacity="0.25"/><circle r="12" fill="#F4E8FF"/></g>
+  <g class="tok3" opacity="0"><circle r="22" fill="#F4E8FF" opacity="0.25"/><circle r="12" fill="#F4E8FF"/></g>
+  <g class="tok4" opacity="0"><circle r="22" fill="#FFE66D" opacity="0.25"/><circle r="12" fill="#FFE66D"/></g>
+  <g class="tok5" opacity="0"><circle r="22" fill="#FFE66D" opacity="0.25"/><circle r="12" fill="#FFE66D"/></g>
+
+  <!-- ======== loop ghosts ======== -->
+  <g class="ghoRefine" opacity="0"><circle r="13" fill="none" stroke="#B026FF" stroke-width="3" stroke-dasharray="6 6"/></g>
+  <g class="ghoRepair" opacity="0"><circle r="13" fill="none" stroke="#FF2DAA" stroke-width="3" stroke-dasharray="6 6"/></g>
+
+  <!-- footer -->
+  <text x="960" y="1055" font-size="17" fill="#6F4F91" text-anchor="middle">proposers never see each other &#183; disagreements become your decision &#183; the verifier never writes code</text>
+</svg>

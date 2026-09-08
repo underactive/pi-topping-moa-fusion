@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output (tsconfig is noEmit; guard against accidental emit)
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Pi agent runtime state
+.pi/
+.rpiv/
+
+# Scratch files
+scratchpad*
+.scratchpad*
+
+# Logs
+logs/
+*.log
+
+# Test / coverage artifacts
+coverage/
+.nyc_output/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+Thumbs.db

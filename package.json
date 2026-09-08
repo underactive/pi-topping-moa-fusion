@@ -1,0 +1,44 @@
+{
+  "name": "@underactive/pi-topping-moa-fusion",
+  "version": "0.1.0",
+  "description": "Pi extension implementing /mf-plan — Claude Code-style 5-phase plan mode with a Mixture-of-Agents proposer/synthesizer pipeline.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Eric Sison",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "files": [
+    "index.ts",
+    "src/",
+    "agents/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test 'test/*.test.mjs'"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "dependencies": {
+    "typebox": "^1.3.2"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-agent-core": "0.84.1",
+    "@earendil-works/pi-ai": "0.84.1",
+    "@earendil-works/pi-coding-agent": "0.84.1",
+    "@earendil-works/pi-tui": "0.84.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.0"
+  }
+}
