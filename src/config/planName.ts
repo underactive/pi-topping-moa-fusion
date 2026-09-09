@@ -5,7 +5,7 @@
 import { completeSimple } from "@earendil-works/pi-ai/compat";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { loadMoaConfig } from "./settings.ts";
-import { fallbackPlanName, generateWordSlug, slugifyPlanName } from "../planning/planFile.ts";
+import { fallbackPlanName, generateWordSlug, trySlugifyPlanName } from "../planning/planFile.ts";
 
 function buildSummarizePrompt(prompt: string): string {
 	return [
@@ -20,8 +20,8 @@ function buildSummarizePrompt(prompt: string): string {
 
 /** Call the active model to summarize a plan prompt into a 4-word slug. */
 export async function summarizePlanPromptName(ctx: ExtensionContext, prompt: string): Promise<string> {
-	const promptSlug = slugifyPlanName(prompt);
-	const fallback = () => promptSlug || fallbackPlanName();
+	const promptSlug = trySlugifyPlanName(prompt);
+	const fallback = () => promptSlug ?? fallbackPlanName();
 
 	const config = loadMoaConfig();
 
@@ -66,8 +66,8 @@ export async function summarizePlanPromptName(ctx: ExtensionContext, prompt: str
 			.join("")
 			.trim();
 
-		const slug = slugifyPlanName(text);
-		return slug || fallback();
+		const slug = trySlugifyPlanName(text);
+		return slug ?? fallback();
 	} catch {
 		return fallback();
 	}

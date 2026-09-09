@@ -111,8 +111,8 @@ export function writePlan(content: string): void {
 	fs.writeFileSync(filePath, content, { encoding: "utf-8" });
 }
 
-/** Convert a 4-word summary into a filename-safe slug (e.g. "add cool new feature" → "add-cool-new-feature"). */
-export function slugifyPlanName(text: string): string {
+/** Convert a 4-word summary into a filename-safe slug, if it contains usable words. */
+export function trySlugifyPlanName(text: string): string | undefined {
 	const words = text
 		.trim()
 		.toLowerCase()
@@ -123,7 +123,12 @@ export function slugifyPlanName(text: string): string {
 
 	const normalized = words.join("-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 	const bounded = normalized.slice(0, MAX_PLAN_SLUG_LENGTH).replace(/-+$/g, "");
-	return isValidPlanSlug(bounded) ? bounded : generateWordSlug();
+	return isValidPlanSlug(bounded) ? bounded : undefined;
+}
+
+/** Convert a 4-word summary into a filename-safe slug, using a random slug for empty input. */
+export function slugifyPlanName(text: string): string {
+	return trySlugifyPlanName(text) ?? generateWordSlug();
 }
 
 /** Fallback slug when LLM summarization is unavailable. */
