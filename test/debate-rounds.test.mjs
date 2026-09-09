@@ -28,9 +28,20 @@ const round1 = {
 
 assert.deepEqual(survivingIndices(round1), [0, 2], "survivors exclude error/cancelled");
 
-// Never stop at round 1, even with <2 survivors or all-kept.
-assert.deepEqual(shouldStopEarly({ round: 1, outcomes: [done(0, 1, "x", "kept")] }), { stop: false });
-assert.deepEqual(shouldStopEarly({ round: 1, outcomes: [] }), { stop: false });
+// Round 1: fewer than two survivors still stops immediately.
+assert.deepEqual(
+	shouldStopEarly({ round: 1, outcomes: [done(0, 1, "x", "kept")] }),
+	{ stop: true, reason: "fewer than two debaters remain" },
+);
+assert.deepEqual(
+	shouldStopEarly({ round: 1, outcomes: [] }),
+	{ stop: true, reason: "fewer than two debaters remain" },
+);
+// Round 1: unanimous "kept" never stops — nobody has moved yet.
+assert.deepEqual(
+	shouldStopEarly({ round: 1, outcomes: [done(0, 1, "x", "kept"), done(2, 1, "y", "kept")] }),
+	{ stop: false },
+);
 
 /** @type {import("../src/debate/debateRounds.ts").DebateRound} */
 const round2AllKept = {

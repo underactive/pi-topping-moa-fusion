@@ -17,7 +17,7 @@ import {
 	parseStance,
 } from "./debateContract.ts";
 import type { DebateRound } from "./debateRounds.ts";
-import { buildNextRoundInputs, shouldStopEarly, survivingIndices } from "./debateRounds.ts";
+import { buildNextRoundInputs, shouldStopEarly } from "./debateRounds.ts";
 
 export interface DebateFanoutHost {
 	getActiveObserveSession(): ObserveSession | undefined;
@@ -183,11 +183,6 @@ export async function runDebateRounds(options: DebateFanoutOptions): Promise<Deb
 
 		let stoppedEarly: string | undefined;
 		for (let round = 1; round <= totalRounds; round++) {
-			if (round > 1 && survivingIndices(completedRounds[completedRounds.length - 1]).length < 2) {
-				stoppedEarly = "fewer than two debaters remain";
-				break;
-			}
-
 			const entries: { index: number; task: string }[] = round === 1
 				? models.map((_, index) => ({
 					index,

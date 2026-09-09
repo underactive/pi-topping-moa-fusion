@@ -19,15 +19,14 @@ export function survivingIndices(round: DebateRound): number[] {
 }
 
 /**
- * Stop conditions checked after every round from round 2 on: a unanimous
- * "kept" round means nobody moved, and fewer than two survivors means no
- * debate is possible. Round 1 always runs.
+ * Stop conditions checked after every round: fewer than two survivors means
+ * no debate is possible, and (from round 2 on, since nobody has moved yet in
+ * round 1) a unanimous "kept" round means nobody moved.
  */
 export function shouldStopEarly(round: DebateRound): { stop: boolean; reason?: string } {
-	if (round.round < 2) return { stop: false };
 	const survivors = round.outcomes.filter((outcome) => outcome.status === "done");
 	if (survivors.length < 2) return { stop: true, reason: "fewer than two debaters remain" };
-	if (survivors.every((outcome) => outcome.stance?.stance === "kept")) {
+	if (round.round >= 2 && survivors.every((outcome) => outcome.stance?.stance === "kept")) {
 		return { stop: true, reason: "all debaters held their positions" };
 	}
 	return { stop: false };
