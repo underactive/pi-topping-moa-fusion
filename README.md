@@ -31,7 +31,7 @@ A Pi extension built around **Mixture of Agents (MoA)** planning: several models
 pi install npm:@underactive/pi-topping-moa-fusion
 ```
 
-Press `F2` (or run `/mf-plan`), describe what you want planned, and pick **Mixture of Agents** when the model picker opens. Assign your models in the **MoA Fusion Pre-flight** overview, then choose **Start fan-out**. In the prompt editor, Tab completes file paths and `@name` fuzzy-searches the repo when `fd` is available (pi's bundled copy, or `fd`/`fdfind` on your PATH); completions insert references, not file contents.
+Run `/mf-plan`, describe what you want planned, and pick **Mixture of Agents** when the model picker opens. Assign your models in the **MoA Fusion Pre-flight** overview, then choose **Start fan-out**. In the prompt editor, Tab completes file paths and `@name` fuzzy-searches the repo when `fd` is available (pi's bundled copy, or `fd`/`fdfind` on your PATH); completions insert references, not file contents.
 
 ## Mixture of Agents (MoA)
 
@@ -134,19 +134,17 @@ During the run, `F3` opens the live observer and `Esc` or `F4` opens cancellatio
 
 | Command | Shortcut | Description |
 |---------|----------|-------------|
-| `/mf-plan` | `F2` | Toggle plan mode on/off |
-| `/mf-opinion` | `F6` | Ask 1–5 models for independent read-only opinions about the repository |
-| `/mf-debate` | `F7` | Run a read-only multi-round debate between up to 5 models |
+| `/mf-plan` | — | Toggle plan mode on/off |
+| `/mf-opinion` | — | Ask 1–5 models for independent read-only opinions about the repository |
+| `/mf-debate` | — | Run a read-only multi-round debate between up to 5 models |
 | `/mf-plan-settings` | — | Configure the explore and cheap/fast agents, named agent rosters for the MoA roles, and plan options |
 | `/mf-plan-implement` | — | Retry implementation of the last approved MoA plan, optionally with a different model |
-| `/mf-plan-clear` | `F5` | Clear completed plan state so the next `/mf-plan` starts a fresh round; approved plans stay in `.pi/mf-plan/` and remain re-implementable |
+| `/mf-plan-clear` | — | Clear completed plan state so the next `/mf-plan` starts a fresh round; approved plans stay in `.pi/mf-plan/` and remain re-implementable |
 | `--mf-plan` | — | Start pi with plan mode enabled |
 | — | `F3` (during MoA runs) | Open a read-only observer of streamed proposer/synthesizer output |
 | — | `Esc` (during MoA runs) / `F4` | Open the cancel overlay: kill one stuck subagent or cancel all |
 
-On Mac laptops the top row sends brightness/media keys by default, so press `Fn+F2`
-or enable *Keyboard → "Use F1, F2, etc. as standard function keys"* in System Settings.
-Rebind any of these via `keybindings.json` if they clash with your terminal.
+On Mac laptops the top row may send brightness/media keys by default. Enable the System Settings option to use the top row as standard function keys if the remaining function-key shortcuts do not work.
 
 ### Cancelling running subagents
 
@@ -174,7 +172,7 @@ Both modes share the same plan-mode container. While it is active:
 
 ### ask_user_question coordination
 
-When an extension such as `rpiv-ask-user-question` registers the `ask_user_question` tool, MoA Fusion defers all in-plan clarification to it rather than drawing its own dialog. The plan-mode tools (`enter_plan_mode`, `exit_plan_mode`, `mf_plan_subagent`) run sequentially, so a same-message `ask_user_question` + `exit_plan_mode` resolves the questionnaire first — MoA Fusion's review overlay never opens on top of it. `exit_plan_mode` refuses with a pending-question error while a questionnaire is still waiting for answers. F2–F7 and the slash commands warn instead of opening; **Esc** and **F4** during a `mf_plan_subagent` run pass through to the questionnaire. MoA orchestration prompts (synthesizer open questions, conflict review, review-loop plan review/chat editor, verification) are deliberately unaffected because they run while the session model is idle. Without the tool registered, the model asks for clarification in plain text and the injected instructions never name `ask_user_question`.
+When an extension such as `rpiv-ask-user-question` registers the `ask_user_question` tool, MoA Fusion defers all in-plan clarification to it rather than drawing its own dialog. The plan-mode tools (`enter_plan_mode`, `exit_plan_mode`, `mf_plan_subagent`) run sequentially, so a same-message `ask_user_question` + `exit_plan_mode` resolves the questionnaire first — MoA Fusion's review overlay never opens on top of it. `exit_plan_mode` refuses with a pending-question error while a questionnaire is still waiting for answers. The slash commands, F3, and F4 warn instead of opening; **Esc** and **F4** during a `mf_plan_subagent` run pass through to the questionnaire. MoA orchestration prompts (synthesizer open questions, conflict review, review-loop plan review/chat editor, verification) are deliberately unaffected because they run while the session model is idle. Without the tool registered, the model asks for clarification in plain text and the injected instructions never name `ask_user_question`.
 
 ## Custom Tools (Available in Plan Mode)
 
@@ -189,7 +187,7 @@ Outside plan mode, one additional tool is exposed:
 
 | Tool | Description |
 |------|-------------|
-| `enter_plan_mode` | Lets the agent enter plan mode itself when asked for a design or plan. Takes the single-model path on the current session model — no pickers, no MoA. Exit and approval work exactly as if the user had pressed F2. |
+| `enter_plan_mode` | Lets the agent enter plan mode itself when asked for a design or plan. Takes the single-model path on the current session model — no pickers, no MoA. Exit and approval work exactly as if the user had invoked `/mf-plan`. |
 
 ## Subagents
 
@@ -278,7 +276,7 @@ mf_plan_subagent({
 
 The slug is a generated adjective-adjective-noun triple (e.g. `happy-mellifluous-iguana`). One slug per session, persisted via `appendEntry` so `/resume` reuses the same file.
 
-`/mf-plan-clear` (`F5`) rotates the session to a fresh empty slug so the next planning round starts without prefilling or re-entry instructions; old plan files under `~/.pi/agent/mf-plan/plans/` are kept, and the approved-plan handoff is preserved so `/mf-plan-implement` still works.
+`/mf-plan-clear` rotates the session to a fresh empty slug so the next planning round starts without prefilling or re-entry instructions; old plan files under `~/.pi/agent/mf-plan/plans/` are kept, and the approved-plan handoff is preserved so `/mf-plan-implement` still works.
 
 ## Non-Interactive Behavior
 

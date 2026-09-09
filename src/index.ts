@@ -244,15 +244,6 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 			);
 		},
 	});
-	pi.registerShortcut(Key.f2, { description: "Toggle MoA Fusion plan mode", handler: async (ctx) => togglePlanMode(ctx) });
-	pi.registerShortcut(Key.f6, {
-		description: "Ask models for independent repo opinions",
-		handler: async (ctx) => { if (controller.questionnaireBusy(ctx)) return; await runInteractiveOpinion(pi, opinionHost, ctx); },
-	});
-	pi.registerShortcut(Key.f7, {
-		description: "Debate a topic across models",
-		handler: async (ctx) => { if (controller.questionnaireBusy(ctx)) return; await runInteractiveDebate(pi, debateHost, ctx); },
-	});
 	// Secondary cancel trigger, and the only one in the mf_plan_subagent
 	// tool path — there the main agent is streaming, so plain ESC must keep
 	// pi's default abort-the-whole-turn behavior.
@@ -263,10 +254,6 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 	pi.registerShortcut(Key.f3, {
 		description: "Observe running plan agents",
 		handler: async (ctx) => { if (controller.questionnaireBusy(ctx)) return; controller.openObserveOverlayIfActive(ctx); },
-	});
-	pi.registerShortcut(Key.f5, {
-		description: "Clear completed plan state",
-		handler: async (ctx) => { if (controller.questionnaireBusy(ctx)) return; await controller.clearCompletedPlan(ctx); },
 	});
 
 	registerEnterPlanModeTool(pi, controller);

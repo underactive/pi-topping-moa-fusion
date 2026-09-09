@@ -184,7 +184,7 @@ try {
 		assert.match(notifications.at(-1).message, /Plan state cleared/);
 	}
 
-	// 10. Command and F5 shortcut registration.
+	// 10. Command registration leaves only the observer and cancellation shortcuts.
 	{
 		const extensionCommands = new Map();
 		const shortcutCalls = [];
@@ -194,9 +194,7 @@ try {
 			registerShortcut: (key, options) => shortcutCalls.push({ key, options }),
 		});
 		assert.equal(typeof extensionCommands.get("mf-plan-clear")?.handler, "function");
-		const f5 = shortcutCalls.find((call) => call.key === "f5");
-		assert.ok(f5, "F5 shortcut registered");
-		assert.match(f5.options.description, /Clear completed plan/);
+		assert.deepEqual(shortcutCalls.map((call) => call.key).sort(), ["f3", "f4"]);
 	}
 
 	// 11. Companion fix: re-entering plan mode suppresses the stale exit reminder.
