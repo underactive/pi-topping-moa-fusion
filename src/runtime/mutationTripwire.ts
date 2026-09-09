@@ -15,6 +15,7 @@ import { createHash } from "node:crypto";
 import { lstat, readFile, readdir } from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
+import { mapWithConcurrencyLimit } from "./processPool.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -170,7 +171,7 @@ export async function hashWorkingTreeFiles(
 ): Promise<Map<string, WorkingTreeFingerprint>> {
 	const fingerprints = new Map<string, WorkingTreeFingerprint>();
 	const root = path.resolve(cwd);
-	await Promise.all(porcelain.split("\n").filter(Boolean).map(async (line) => {
+	await mapWithConcurrencyLimit(porcelain.split("\n").filter(Boolean), 8, async (line) => {
 		const { displayPath, relativePath } = parsePorcelainEntry(line);
 		try {
 			const filePath = path.resolve(root, relativePath);
@@ -198,7 +199,7 @@ export async function hashWorkingTreeFiles(
 		} catch {
 			fingerprints.set(displayPath, { hash: "unreadable" });
 		}
-	}));
+	});
 	return fingerprints;
 }
 
