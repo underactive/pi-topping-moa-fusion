@@ -1,11 +1,12 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import type { AgentConfig } from "../agents/discovery.ts";
-import { modelExtensionOptions, resolveContextWindow, resolveModelCost } from "../moa/modelRuntime.ts";
+import { runWidgetFanout } from "../moa/fanoutWiring.ts";
+import { modelExtensionOptions, resolveContextWindow } from "../moa/modelRuntime.ts";
 import type { CancelSession } from "../runtime/cancelRun.ts";
 import { CancelRun } from "../runtime/cancelRun.ts";
-import { getFinalOutput, getResultOutput, isFailedResult, type SingleResult } from "../runtime/results.ts";
-import { runParallelAgentsWithModels, type ModelParallelAgentTask } from "../runtime/runner.ts";
+import { getFinalOutput, isFailedResult, type SingleResult } from "../runtime/results.ts";
+import type { ModelParallelAgentTask } from "../runtime/runner.ts";
 import { modelRefLabel, type ModelRef, type ThinkingLevel } from "../shared/modelRefs.ts";
 import { activityLoopCount } from "../ui/agentStatus.ts";
 import type { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
@@ -52,69 +53,11 @@ export async function runOpinionFanout(options: OpinionFanoutOptions): Promise<O
 	host.setActiveObserveSession(observe);
 
 	try {
-		const runBatch = async (
+		const runBatch = (
 			tasks: ModelParallelAgentTask[],
 			indexMap: (index: number) => number,
 			currentRun: CancelRun,
-		): Promise<SingleResult[]> => {
-			const unsubscribe = currentRun.onChange(() => {
-				currentRun.agents.forEach((agent, index) => {
-					if (agent.state === "cancelling") widget.update(indexMap(index), "cancelling");
-				});
-			});
-			session.run = currentRun;
-			try {
-				return await runParallelAgentsWithModels(
-					ctx.cwd,
-					agents,
-					tasks,
-					undefined,
-					(index, result) => {
-						const opinionIndex = indexMap(index);
-						widget.updateTranscript(opinionIndex, result.messages);
-						const observed = observe.agents[opinionIndex];
-						if (observed) {
-							observed.messages = result.messages;
-							observed.partial = undefined;
-						}
-						if (result.cancelled) {
-							currentRun.settle(index, "cancelled");
-							widget.update(opinionIndex, "cancelled");
-							if (observed) observed.state = "cancelled";
-						} else if (isFailedResult(result)) {
-							currentRun.settle(index, "error");
-							widget.update(opinionIndex, "error", getResultOutput(result).slice(0, 80));
-							if (observed) observed.state = "error";
-						} else {
-							currentRun.settle(index, "done");
-							widget.update(opinionIndex, "done");
-							if (observed) observed.state = "done";
-						}
-					},
-					(index, result) => {
-						const opinionIndex = indexMap(index);
-						widget.updateUsage(
-							opinionIndex,
-							result.usage.contextTokens,
-							result.usage.turns,
-							result.usage.toolCalls,
-							resolveModelCost(ctx, models[opinionIndex], result.usage),
-						);
-						if (result.activity) widget.updateActivity(opinionIndex, result.activity);
-						if (result.outputActivity) widget.updateOutput(opinionIndex, result.outputActivity.tokens, result.outputActivity.revision);
-						widget.updateTranscript(opinionIndex, result.messages, result.partialAssistant);
-						const observed = observe.agents[opinionIndex];
-						if (observed) {
-							observed.messages = result.messages;
-							observed.partial = result.partialAssistant;
-						}
-					},
-				);
-			} finally {
-				unsubscribe();
-				session.run = undefined;
-			}
-		};
+		): Promise<SingleResult[]> => runWidgetFanout({ ctx, agents, tasks, run: currentRun, session, widget, observe, models, indexMap });
 
 		const run = new CancelRun();
 		session.title = "Opinion agents";
