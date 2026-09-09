@@ -350,8 +350,8 @@
   <path d="M1638 590 l-13,-6.5 v13 z" fill="#8D5CBA"/>
 
   <!-- refine loop: approve -> synthesizer (dashed, always marching) -->
-  <path class="march" d="M1150 668 C 1110 790, 930 790, 890 672" fill="none"
-        stroke="#B026FF" stroke-width="3.5" stroke-dasharray="10 8" opacity="0.75"/>
+  <path d="M1150 668 C 1110 790, 930 790, 890 672" fill="none"
+        stroke="#B026FF" stroke-width="3.5" opacity="0.75"/>
   <path transform="translate(890,672) rotate(-109)" d="M0 0 L-16 -7 L-16 7 Z" fill="#B026FF"/>
   <text x="1020" y="798" font-size="20" font-weight="700" fill="#B026FF" text-anchor="middle">refine &#183; up to 5 rounds</text>
   <text x="1020" y="824" font-size="15" fill="#A98BC2" text-anchor="middle">your feedback re-synthesizes the plan</text>
@@ -375,46 +375,26 @@
     <rect x="400" y="165" width="190" height="110" rx="16" fill="#160B30" stroke="#FF2DAA" stroke-width="3.5"/>
     <rect class="glowP" x="400" y="165" width="190" height="110" rx="16" fill="none" stroke="#FF2DAA" stroke-width="7"/>
     <text x="483" y="231" font-size="22" font-weight="700" fill="#FF2DAA" text-anchor="middle">&#9670; proposer 1</text>
-    <g stroke="#FF2DAA" stroke-width="3" fill="none">
-      <rect x="551" y="185" width="20" height="15" rx="3"/>
-      <path d="M555 185 v-5 a6 6 0 0 1 12 0 v5"/>
-    </g>
   </g>
   <g>
     <rect x="400" y="350" width="190" height="110" rx="16" fill="#160B30" stroke="#B026FF" stroke-width="3.5"/>
     <rect class="glowP" x="400" y="350" width="190" height="110" rx="16" fill="none" stroke="#B026FF" stroke-width="7"/>
     <text x="483" y="416" font-size="22" font-weight="700" fill="#B026FF" text-anchor="middle">&#9650; proposer 2</text>
-    <g stroke="#B026FF" stroke-width="3" fill="none">
-      <rect x="551" y="370" width="20" height="15" rx="3"/>
-      <path d="M555 370 v-5 a6 6 0 0 1 12 0 v5"/>
-    </g>
   </g>
   <g>
     <rect x="400" y="535" width="190" height="110" rx="16" fill="#160B30" stroke="#00F0FF" stroke-width="3.5"/>
     <rect class="glowP" x="400" y="535" width="190" height="110" rx="16" fill="none" stroke="#00F0FF" stroke-width="7"/>
     <text x="483" y="601" font-size="22" font-weight="700" fill="#00F0FF" text-anchor="middle">&#9679; proposer 3</text>
-    <g stroke="#00F0FF" stroke-width="3" fill="none">
-      <rect x="551" y="555" width="20" height="15" rx="3"/>
-      <path d="M555 555 v-5 a6 6 0 0 1 12 0 v5"/>
-    </g>
   </g>
   <g>
     <rect x="400" y="720" width="190" height="110" rx="16" fill="#160B30" stroke="#FFE66D" stroke-width="3.5"/>
     <rect class="glowP" x="400" y="720" width="190" height="110" rx="16" fill="none" stroke="#FFE66D" stroke-width="7"/>
     <text x="483" y="786" font-size="22" font-weight="700" fill="#FFE66D" text-anchor="middle">&#9733; proposer 4</text>
-    <g stroke="#FFE66D" stroke-width="3" fill="none">
-      <rect x="551" y="740" width="20" height="15" rx="3"/>
-      <path d="M555 740 v-5 a6 6 0 0 1 12 0 v5"/>
-    </g>
   </g>
   <g>
     <rect x="400" y="905" width="190" height="110" rx="16" fill="#160B30" stroke="#3D8BFF" stroke-width="3.5"/>
     <rect class="glowP" x="400" y="905" width="190" height="110" rx="16" fill="none" stroke="#3D8BFF" stroke-width="7"/>
     <text x="483" y="971" font-size="22" font-weight="700" fill="#3D8BFF" text-anchor="middle">&#10022; proposer 5</text>
-    <g stroke="#3D8BFF" stroke-width="3" fill="none">
-      <rect x="551" y="925" width="20" height="15" rx="3"/>
-      <path d="M555 925 v-5 a6 6 0 0 1 12 0 v5"/>
-    </g>
   </g>
 
   <!-- proposer working rings -->
@@ -428,16 +408,18 @@
   <g>
     <rect x="760" y="515" width="220" height="150" rx="18" fill="#1B0D38" stroke="#8A5CFF" stroke-width="3.5"/>
     <rect class="glowSyn" x="760" y="515" width="220" height="150" rx="18" fill="#8A5CFF" fill-opacity="0.14" stroke="#8A5CFF" stroke-width="8"/>
-    <!-- five plans merge into one -->
-    <g stroke-width="3.5" fill="none" stroke-linecap="round">
-      <path d="M832 524 L884 556" stroke="#FF2DAA"/>
-      <path d="M832 540 L884 556" stroke="#B026FF"/>
-      <path d="M832 556 L884 556" stroke="#00F0FF"/>
-      <path d="M832 572 L884 556" stroke="#FFE66D"/>
-      <path d="M832 588 L884 556" stroke="#3D8BFF"/>
-      <path d="M884 556 L910 556" stroke="#F4E8FF" stroke-width="4"/>
+    <g transform="translate(0,17)">
+      <!-- five plans merge into one -->
+      <g stroke-width="3.5" fill="none" stroke-linecap="round">
+        <path d="M832 524 L884 556" stroke="#FF2DAA"/>
+        <path d="M832 540 L884 556" stroke="#B026FF"/>
+        <path d="M832 556 L884 556" stroke="#00F0FF"/>
+        <path d="M832 572 L884 556" stroke="#FFE66D"/>
+        <path d="M832 588 L884 556" stroke="#3D8BFF"/>
+        <path d="M884 556 L910 556" stroke="#F4E8FF" stroke-width="4"/>
+      </g>
+      <text x="870" y="622" font-size="25" font-weight="700" fill="#F4E8FF" text-anchor="middle">SYNTHESIZE</text>
     </g>
-    <text x="870" y="622" font-size="25" font-weight="700" fill="#F4E8FF" text-anchor="middle">SYNTHESIZE</text>
   </g>
   <text x="870" y="496" font-size="16" fill="#A98BC2" text-anchor="middle">verifies claims &#183; one plan</text>
 
