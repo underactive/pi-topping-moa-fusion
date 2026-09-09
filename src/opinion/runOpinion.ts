@@ -24,6 +24,7 @@ export interface OpinionHost {
 	openCancelOverlayIfActive(ctx: ExtensionContext): boolean;
 	getActiveObserveSession(): ObserveSession | undefined;
 	setActiveObserveSession(session: ObserveSession | undefined): void;
+	setRunningProgressWidget(widget: MoaProgressWidget | undefined): void;
 }
 
 export async function runInteractiveOpinion(
@@ -110,10 +111,12 @@ export async function runInteractiveOpinion(
 			);
 			const tripwire = new MutationTripwire();
 			await tripwire.arm(ctx.cwd);
+			host.setRunningProgressWidget(widget);
 			let outcome;
 			try {
 				outcome = await runOpinionFanout({ host, ctx, question, models, thinking, session, widget, agents });
 			} finally {
+				host.setRunningProgressWidget(undefined);
 				widget.stopWidget();
 				const changed = await tripwire.check(ctx.cwd);
 				if (changed.length > 0) {

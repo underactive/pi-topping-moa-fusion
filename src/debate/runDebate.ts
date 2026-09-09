@@ -107,10 +107,12 @@ export async function runInteractiveDebate(
 			);
 			const tripwire = new MutationTripwire();
 			await tripwire.arm(ctx.cwd);
+			host.setRunningProgressWidget(widget);
 			let outcome;
 			try {
 				outcome = await runDebateRounds({ host, ctx, topic, models, thinking, rounds, session, widget, agents });
 			} finally {
+				host.setRunningProgressWidget(undefined);
 				widget.stopWidget();
 				const changed = await tripwire.check(ctx.cwd);
 				if (changed.length > 0) {

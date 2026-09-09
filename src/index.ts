@@ -35,6 +35,7 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 		openCancelOverlayIfActive: controller.openCancelOverlayIfActive,
 		getActiveObserveSession: controller.getActiveObserveSession,
 		setActiveObserveSession: (session) => { controller.moaRunHost.setActiveObserveSession(session); },
+		setRunningProgressWidget: controller.moaRunHost.setRunningProgressWidget,
 	};
 	const debateHost = opinionHost;
 	const togglePlanMode = async (ctx: Parameters<typeof controller.exitPlanMode>[0], prompt?: string): Promise<void> => {
