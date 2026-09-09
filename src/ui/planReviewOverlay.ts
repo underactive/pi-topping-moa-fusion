@@ -1,6 +1,6 @@
 import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
-import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
+import { Key, Markdown, matchesKey, stripTerminalSequences, truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
 import { shortModelName, type ModelRef } from "../shared/modelRefs.ts";
 import type { MfPlanInfo, PlanReviewDecision } from "../moa/planInfo.ts";
 import { ROUNDED_SINGLE_BOX, createFrame, ratioViewport, safeRenderWidth } from "./chrome.ts";
@@ -138,13 +138,13 @@ class PlanReviewOverlay implements Component {
 		private readonly allowChat: boolean,
 		private readonly done: (decision: PlanReviewDecision) => void,
 	) {
-		this.markdown = new Markdown(planMarkdown, 0, 0, getMarkdownTheme());
+		this.markdown = new Markdown(stripTerminalSequences(planMarkdown), 0, 0, getMarkdownTheme());
 		for (const proposal of moaInfo?.proposerPlans ?? []) {
-			this.proposerMarkdown.set(proposal.proposerIndex, new Markdown(proposal.markdown, 0, 0, getMarkdownTheme()));
+			this.proposerMarkdown.set(proposal.proposerIndex, new Markdown(stripTerminalSequences(proposal.markdown), 0, 0, getMarkdownTheme()));
 			this.proposerLabels.set(proposal.proposerIndex, shortModelName(proposal.model));
 		}
 		if (moaInfo?.verdictsMarkdown) {
-			this.verdictsMarkdown = new Markdown(moaInfo.verdictsMarkdown, 0, 0, getMarkdownTheme());
+			this.verdictsMarkdown = new Markdown(stripTerminalSequences(moaInfo.verdictsMarkdown), 0, 0, getMarkdownTheme());
 		}
 	}
 
