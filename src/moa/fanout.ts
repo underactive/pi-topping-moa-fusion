@@ -3,14 +3,15 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { AgentConfig } from "../agents/discovery.ts";
 import type { CancelSession } from "../runtime/cancelRun.ts";
 import { CancelRun } from "../runtime/cancelRun.ts";
-import { getFinalOutput, getResultOutput, isFailedResult } from "../runtime/results.ts";
-import { runParallelAgentsWithModels, type ModelParallelAgentTask } from "../runtime/runner.ts";
+import { getFinalOutput, isFailedResult } from "../runtime/results.ts";
+import type { ModelParallelAgentTask } from "../runtime/runner.ts";
 import { modelRefLabel, TRIGGER_TURN, type ModelRef, type ThinkingLevel } from "../shared/modelRefs.ts";
 import { activityLoopCount } from "../ui/agentStatus.ts";
 import type { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import type { ObserveSession } from "../ui/observeOverlay.ts";
+import { runWidgetFanout } from "./fanoutWiring.ts";
 import { buildProposerRetryTask, buildProposerTask, looksLikePlan } from "./planlessRetry.ts";
-import { modelExtensionOptions, resolveContextWindow, resolveModelCost } from "./modelRuntime.ts";
+import { modelExtensionOptions, resolveContextWindow } from "./modelRuntime.ts";
 import type { MoaRunContext, MoaRunHost, SucceededProposal } from "./runContext.ts";
 
 export type FanoutPhaseResult =
@@ -62,65 +63,8 @@ export async function runFanoutPhase(options: FanoutPhaseOptions): Promise<Fanou
 			loopCount: activityLoopCount(status.activity, status.activityHistory),
 		};
 	};
-	const runFanout = async (tasks: ModelParallelAgentTask[], indexMap: (index: number) => number, currentRun: CancelRun) => {
-		const unsubscribe = currentRun.onChange(() => {
-			currentRun.agents.forEach((agent, index) => {
-				if (agent.state === "cancelling") widget.update(indexMap(index), "cancelling");
-			});
-		});
-		session.run = currentRun;
-		try {
-			return await runParallelAgentsWithModels(
-				ctx.cwd,
-				agents,
-				tasks,
-				undefined,
-				(index, result) => {
-					const proposerIndex = indexMap(index);
-					widget.updateTranscript(proposerIndex, result.messages);
-					const observed = observe.agents[proposerIndex];
-					if (observed) {
-						observed.messages = result.messages;
-						observed.partial = undefined;
-					}
-					if (result.cancelled) {
-						currentRun.settle(index, "cancelled");
-						widget.update(proposerIndex, "cancelled");
-						if (observed) observed.state = "cancelled";
-					} else if (isFailedResult(result)) {
-						currentRun.settle(index, "error");
-						widget.update(proposerIndex, "error", getResultOutput(result).slice(0, 80));
-						if (observed) observed.state = "error";
-					} else {
-						currentRun.settle(index, "done");
-						widget.update(proposerIndex, "done");
-						if (observed) observed.state = "done";
-					}
-				},
-				(index, result) => {
-					const proposerIndex = indexMap(index);
-					widget.updateUsage(
-						proposerIndex,
-						result.usage.contextTokens,
-						result.usage.turns,
-						result.usage.toolCalls,
-						resolveModelCost(ctx, proposers[proposerIndex], result.usage),
-					);
-					if (result.activity) widget.updateActivity(proposerIndex, result.activity);
-					if (result.outputActivity) widget.updateOutput(proposerIndex, result.outputActivity.tokens, result.outputActivity.revision);
-					widget.updateTranscript(proposerIndex, result.messages, result.partialAssistant);
-					const observed = observe.agents[proposerIndex];
-					if (observed) {
-						observed.messages = result.messages;
-						observed.partial = result.partialAssistant;
-					}
-				},
-			);
-		} finally {
-			unsubscribe();
-			session.run = undefined;
-		}
-	};
+	const runFanout = (tasks: ModelParallelAgentTask[], indexMap: (index: number) => number, currentRun: CancelRun) =>
+		runWidgetFanout({ ctx, agents, tasks, run: currentRun, session, widget, observe, models: proposers, indexMap });
 
 	// The planning contract travels inside the task text — the only channel
 	// guaranteed to survive a bridge's system-prompt override. The observer keeps
