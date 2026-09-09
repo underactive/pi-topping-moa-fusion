@@ -273,7 +273,6 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 	registerWritePlanTool(pi, controller.isEnabled);
 	registerMfPlanSubagentTool(pi, controller);
 	registerExitPlanModeTool(pi, controller);
-	controller.deactivatePlanOnlyTools();
 
 	pi.on("context", controller.onContext);
 	pi.on("before_agent_start", controller.onBeforeAgentStart);

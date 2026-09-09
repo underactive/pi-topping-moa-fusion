@@ -20,7 +20,7 @@ if (!process.execArgv.includes("--experimental-transform-types")) {
 
 const { default: mfPlanExtension } = await import("../src/index.ts");
 const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
-const tempRoot = mkdtempSync(path.join(tmpdir(), "moa-plan-tool-leak-test-"));
+const tempRoot = mkdtempSync(path.join(tmpdir(), "mf-plan-tool-leak-test-"));
 
 let activeTools = ["read", "write", "enter_plan_mode"];
 let setActiveToolsCalls = 0;
@@ -70,8 +70,15 @@ try {
 	process.env.PI_CODING_AGENT_DIR = path.join(tempRoot, "agent");
 	mfPlanExtension(fakePi);
 
-	// Registration activates all four tools, but extension startup must immediately
-	// remove the three plan-only tools while preserving the entry tool.
+	// Registration activates all four tools in this harness. Startup cleanup is
+	// deferred until the first post-load lifecycle callback because active-tool
+	// APIs are unavailable while the extension factory is loading.
+	assert.ok(activeTools.includes("enter_plan_mode"));
+	assert.ok(activeTools.includes("write"));
+	assert.ok(activeTools.includes("write_plan"));
+	assert.ok(activeTools.includes("exit_plan_mode"));
+	assert.ok(activeTools.includes("mf_plan_subagent"));
+	await handlers.get("before_agent_start")({}, ctx);
 	assert.ok(activeTools.includes("enter_plan_mode"));
 	assert.ok(activeTools.includes("write"));
 	assert.ok(!activeTools.includes("write_plan"));

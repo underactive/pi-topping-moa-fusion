@@ -65,7 +65,7 @@ assert.match(orchestration, /restoreReadOnlyProviderEnv\(\);\s*\n\s*pi\.setActiv
 assert.match(orchestration, /const PLAN_ONLY_REGISTERED_TOOLS = \["write_plan", "exit_plan_mode", "mf_plan_subagent"\]/);
 assert.match(orchestration, /\} else \{\s*deactivatePlanOnlyTools\(\);\s*\}\s*\n\s*updateStatus\(ctx\);/);
 assert.match(orchestration, /if \(!planModeEnabled\) \{\s*deactivatePlanOnlyTools\(\);\s*return;\s*\}/);
-assert.match(orchestration, /registerExitPlanModeTool\(pi, controller\);\s*controller\.deactivatePlanOnlyTools\(\);/);
+assert.doesNotMatch(orchestration, /registerExitPlanModeTool\(pi, controller\);\s*controller\.deactivatePlanOnlyTools\(\);/);
 assert.match(orchestration, /if \(controller\.questionnaireBusy\(ctx\)\) return;\s*\n\s*if \(controller\.isEnabled\(\)\) controller\.exitPlanMode\(ctx\);\s*\n\s*let handoff = controller\.getImplementationHandoff\(\);/);
 
 // Restoring the env on approval is inert for a running agentic-bridge query — it
