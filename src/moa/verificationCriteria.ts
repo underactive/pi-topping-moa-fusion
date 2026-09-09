@@ -32,14 +32,16 @@ export function buildCriteriaTask(plan: string): string {
 	].join("\n\n");
 }
 
-function sectionBullets(output: string): string[] {
+/** Collect `- …`/`* …` bullets under a heading, stopping at the next heading. */
+export function sectionBullets(output: string, heading: RegExp): string[] {
 	const lines = output.split("\n");
-	const start = lines.findIndex((line) => /^\s*##\s+Verification Criteria\b/i.test(line));
+	const start = lines.findIndex((line) => heading.test(line));
 	if (start < 0) return [];
 	const bullets: string[] = [];
 	for (let i = start + 1; i < lines.length; i++) {
-		if (/^\s*#{1,6}\s/.test(lines[i])) break;
-		const match = lines[i].match(/^\s*[-*]\s+(.*\S)\s*$/);
+		const line = lines[i];
+		if (/^\s*#{1,6}\s/.test(line)) break;
+		const match = line.match(/^\s*[-*]\s+(.*\S)\s*$/);
 		if (match) bullets.push(match[1].trim());
 	}
 	return bullets;
@@ -48,7 +50,7 @@ function sectionBullets(output: string): string[] {
 export function parseVerificationCriteria(output: string): VerificationCriterion[] {
 	const seen = new Set<string>();
 	const criteria: VerificationCriterion[] = [];
-	for (const bullet of sectionBullets(output)) {
+	for (const bullet of sectionBullets(output, /^\s*##\s+Verification Criteria\b/i)) {
 		const match = bullet.match(/^\*\*(C\d+):?\*\*:?[\s]*(.+)$/i);
 		if (!match) continue;
 		const id = match[1].toUpperCase();

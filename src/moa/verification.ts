@@ -38,7 +38,7 @@ import {
 	type ImplementationHandoff,
 } from "./implementationRetry.ts";
 import { modelExtensionOptions, resolveContextWindow, resolveModelCost } from "./modelRuntime.ts";
-import { parseVerificationCriteria, type VerificationCriterion } from "./verificationCriteria.ts";
+import { parseVerificationCriteria, sectionBullets, type VerificationCriterion } from "./verificationCriteria.ts";
 import type { MoaRunHost } from "./runContext.ts";
 import { captureImplementationDiff, discoverVerifyScripts, runVerifyScript, type VerifyResult } from "./verifyGate.ts";
 
@@ -196,21 +196,6 @@ export function buildVerifierTask(input: {
 		"---",
 		outputContract,
 	].join("\n\n");
-}
-
-/** Collect `- …`/`* …` bullets under a heading, stopping at the next heading. */
-function sectionBullets(output: string, heading: RegExp): string[] {
-	const lines = output.split("\n");
-	const start = lines.findIndex((line) => heading.test(line));
-	if (start < 0) return [];
-	const bullets: string[] = [];
-	for (let i = start + 1; i < lines.length; i++) {
-		const line = lines[i];
-		if (/^\s*#{1,6}\s/.test(line)) break;
-		const match = line.match(/^\s*[-*]\s+(.*\S)\s*$/);
-		if (match) bullets.push(match[1].trim());
-	}
-	return bullets;
 }
 
 /**
