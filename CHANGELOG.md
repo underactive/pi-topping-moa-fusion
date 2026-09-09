@@ -11,3 +11,7 @@
 
 - Updated plan, opinion, and debate request prompts to use the completion-enabled prompt editor.
 - Highlighted tool-call activity rows in the MoA Fusion table and the cancel overlay with pi's theme colours: a bold `toolTitle` tool name followed by an `accent` argument.
+
+### Fixed
+
+- Fixed two-pane model picker selection highlight to span the full pane width and appear only on the active pane.

@@ -51,14 +51,19 @@ assert.match(picker, /modelThinkingPaneWidths\(bodyWidth\)/);
 // Every pane row reserves a one-column inset before truncating to pane width.
 assert.match(picker, /this\.modelList\.render\(Math\.max\(1, leftWidth - 1\)\)/);
 assert.match(picker, /this\.levelList\.render\(Math\.max\(1, rightWidth - 1\)\)/);
-assert.match(picker, /column\(` \$\{modelLines\[index\] \?\? ""\}`, leftWidth\)/);
-assert.match(picker, /column\(` \$\{levelLines\[index\] \?\? ""\}`, rightWidth\)/);
+assert.match(picker, /column\(` \$\{modelLine\}`, leftWidth\)/);
+assert.match(picker, /column\(` \$\{levelLine\}`, rightWidth\)/);
 assert.match(picker, /` filter: \$\{this\.filter\}`/);
 
-// Selected prefix and label retain their existing styling under selectedBg.
-assert.match(picker, /function buildSelectListTheme\(theme: Theme\)/);
-assert.match(picker, /selectedText: \(text: string\) => theme\.bg\("selectedBg", base\.selectedText\(text\)\)/);
-assert.match(picker, /selectedPrefix: \(text: string\) => theme\.bg\("selectedBg", base\.selectedPrefix\(text\)\)/);
+// Selected rows retain base-theme foreground styling; render applies the
+// background only to the active pane's already-padded cell.
+assert.doesNotMatch(picker, /buildSelectListTheme/);
+assert.doesNotMatch(picker, /new SelectList\([^)]*,\s*[^,)]*theme[^,)]*\)/);
+assert.match(picker, /new SelectList\(\[\], 1, getSelectListTheme\(\)\)/);
+assert.match(picker, /this\.activePane === "model" && modelLine\.includes\("→"\)/);
+assert.match(picker, /this\.activePane === "level" && levelLine\.includes\("→"\)/);
+assert.match(picker, /this\.theme\.bg\("selectedBg", leftCell\)/);
+assert.match(picker, /this\.theme\.bg\("selectedBg", rightCell\)/);
 assert.match(picker, /\{ wrapHints: true \}/);
 
 console.log("Two-pane model picker Tab-cycle tests passed.");

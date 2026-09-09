@@ -28,15 +28,6 @@ function modelThinkingPaneWidths(bodyWidth: number): { left: number; right: numb
 	return { left: Math.max(1, bodyWidth - divider - right), right };
 }
 
-function buildSelectListTheme(theme: Theme) {
-	const base = getSelectListTheme();
-	return {
-		...base,
-		selectedText: (text: string) => theme.bg("selectedBg", base.selectedText(text)),
-		selectedPrefix: (text: string) => theme.bg("selectedBg", base.selectedPrefix(text)),
-	};
-}
-
 export function parseRef(value: string): ModelRef {
 	const idx = value.indexOf("/");
 	if (idx === -1) return { provider: value, id: "" };
@@ -70,8 +61,8 @@ export class TwoPaneModelThinking {
 		private readonly ctx: ExtensionContext,
 	) {
 		this.modelItems = toModelItems(availableRefs);
-		this.modelList = new SelectList([], 1, buildSelectListTheme(theme));
-		this.levelList = new SelectList([], 1, buildSelectListTheme(theme));
+		this.modelList = new SelectList([], 1, getSelectListTheme());
+		this.levelList = new SelectList([], 1, getSelectListTheme());
 		this.reset();
 	}
 
@@ -125,7 +116,7 @@ export class TwoPaneModelThinking {
 		this.modelList = new SelectList(
 			items,
 			Math.min(Math.max(items.length, 1), this.listItemRows(items.length)),
-			buildSelectListTheme(this.theme),
+			getSelectListTheme(),
 			MODEL_LIST_LAYOUT,
 		);
 		this.modelList.onSelectionChange = () => {
@@ -154,7 +145,7 @@ export class TwoPaneModelThinking {
 			: [];
 		const levels = thinkingOptionsForModel(registryLevels);
 		const items = (levels.length > 0 ? levels : ["off"]).map((level) => ({ value: level, label: level }));
-		this.levelList = new SelectList(items, Math.min(Math.max(items.length, 1), this.listItemRows(items.length)), buildSelectListTheme(this.theme));
+		this.levelList = new SelectList(items, Math.min(Math.max(items.length, 1), this.listItemRows(items.length)), getSelectListTheme());
 		if (!key) return;
 		const preferred = defaultThinkingForModel(key, this.config, this.currentThinking, registryLevels);
 		const preferredIndex = levels.indexOf(preferred);
@@ -241,10 +232,18 @@ export class TwoPaneModelThinking {
 			headers,
 		];
 		for (let index = 0; index < rows; index++) {
-			const line = column(` ${modelLines[index] ?? ""}`, leftWidth)
-				+ paneDivider
-				+ column(` ${levelLines[index] ?? ""}`, rightWidth);
-			lines.push(line);
+			const modelLine = modelLines[index] ?? "";
+			const levelLine = levelLines[index] ?? "";
+			let leftCell = column(` ${modelLine}`, leftWidth);
+			let rightCell = column(` ${levelLine}`, rightWidth);
+			// SelectList renders "→ " only on the selected row; other rows use "  ".
+			if (this.activePane === "model" && modelLine.includes("→")) {
+				leftCell = this.theme.bg("selectedBg", leftCell);
+			}
+			if (this.activePane === "level" && levelLine.includes("→")) {
+				rightCell = this.theme.bg("selectedBg", rightCell);
+			}
+			lines.push(leftCell + paneDivider + rightCell);
 		}
 		return lines.slice(0, this.maxVisibleRows);
 	}
