@@ -173,6 +173,5 @@ export function reconcileContextTokens(
 		}
 		return { contextTokens: totalTokens, authoritative: false, changed: current !== totalTokens };
 	}
-	const contextTokens = Math.max(current ?? 0, totalTokens);
-	return { contextTokens, authoritative: true, changed: current !== contextTokens };
+	return { contextTokens: totalTokens, authoritative: true, changed: current !== totalTokens };
 }

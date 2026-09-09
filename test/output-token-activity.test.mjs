@@ -145,7 +145,7 @@ const delta = (type, text, contentIndex = 0) => ({ type, delta: text, contentInd
 	state = reconcileContextTokens(state.contextTokens, state.authoritative, 130, "beacon");
 	assert.deepEqual(state, { contextTokens: 120, authoritative: true, changed: false });
 	state = reconcileContextTokens(150, false, 120, "message_end");
-	assert.deepEqual(state, { contextTokens: 150, authoritative: true, changed: false }, "terminal reconciliation never regresses");
+	assert.deepEqual(state, { contextTokens: 120, authoritative: true, changed: true }, "terminal reconciliation reflects the latest reported total, even when it drops");
 }
 
 console.log("Output token activity tests passed.");
