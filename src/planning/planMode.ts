@@ -120,6 +120,21 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		activeProgressWidget?.stopWidget();
 		activeProgressWidget = undefined;
 	};
+	const resetImplementationCounters = (): void => {
+		lastImplementationStopReason = undefined;
+		lastImplementationReport = undefined;
+		resetImplementationTranscript();
+		implementationUsage = undefined;
+		implementationContextTokens = undefined;
+		implementationTurns = 0;
+		implementationToolCalls = 0;
+	};
+	const resetImplementationState = (): void => {
+		implementationPending = false;
+		implementationOutputTracker = undefined;
+		resetImplementationCounters();
+		stopActiveProgressWidget();
+	};
 	const persistState = (): void => persistence.persist({
 		enabled: planModeEnabled,
 		slug: planSlug ?? getPlanSlug(),
@@ -213,16 +228,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		planSlug = getPlanSlug();
 		lastReentryState = getPlan() !== null;
 		if (clearRunInfo) activeRunMoaInfo = undefined;
-		implementationPending = false;
-		lastImplementationStopReason = undefined;
-		lastImplementationReport = undefined;
-		implementationOutputTracker = undefined;
-		resetImplementationTranscript();
-		implementationUsage = undefined;
-		implementationContextTokens = undefined;
-		implementationTurns = 0;
-		implementationToolCalls = 0;
-		stopActiveProgressWidget();
+		resetImplementationState();
 		enablePlanModeTools();
 		updateStatus(ctx);
 		persistState();
@@ -255,16 +261,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		planRepoSlug = undefined;
 		lastReentryState = false;
 		activeRunMoaInfo = undefined;
-		implementationPending = false;
-		lastImplementationStopReason = undefined;
-		lastImplementationReport = undefined;
-		implementationOutputTracker = undefined;
-		resetImplementationTranscript();
-		implementationUsage = undefined;
-		implementationContextTokens = undefined;
-		implementationTurns = 0;
-		implementationToolCalls = 0;
-		stopActiveProgressWidget();
+		resetImplementationState();
 		persistState();
 		ctx.ui.notify("Plan state cleared — the next /mf-plan starts a fresh planning round.");
 	};
@@ -301,14 +298,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		},
 		markImplementationPending: (ctx) => {
 			implementationPending = true;
-			lastImplementationStopReason = undefined;
-			lastImplementationReport = undefined;
 			implementationOutputTracker = new OutputActivityTracker();
-			resetImplementationTranscript();
-			implementationUsage = undefined;
-			implementationContextTokens = undefined;
-			implementationTurns = 0;
-			implementationToolCalls = 0;
+			resetImplementationCounters();
 			// Reconstruct the table for a resumed run that never adopted one (e.g.
 			// /mf-plan-implement after a restart). In-run paths already hold the
 			// adopted widget, so this only fires when none exists; single-model
@@ -503,16 +494,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			activeCancelSession = undefined;
 			activeObserveSession = undefined;
 			implementationHandoff = undefined;
-			implementationPending = false;
-			lastImplementationStopReason = undefined;
-			lastImplementationReport = undefined;
-			implementationOutputTracker = undefined;
-			resetImplementationTranscript();
-			implementationUsage = undefined;
-			implementationContextTokens = undefined;
-			implementationTurns = 0;
-			implementationToolCalls = 0;
-			stopActiveProgressWidget();
+			resetImplementationState();
 			// Clear any blocked flag left by a questionnaire that died without its
 			// finally (a fresh session must not inherit a stuck "answer first" gate),
 			// then re-subscribe (retaining the handle means no stacked handlers).
