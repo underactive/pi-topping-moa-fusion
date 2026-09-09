@@ -22,7 +22,7 @@ export interface ParsedStance {
 }
 
 export function parseStance(output: string): ParsedStance {
-	const stanceMatch = output.match(/\*\*Stance:\*\*\s*(initial|kept|switched|refined)/i);
+	const stanceMatch = output.match(DEBATE_STANCE_LINE);
 	const sidesMatch = output.match(/\*\*Sides with:\*\*\s*(.+)/i);
 	const stance = (stanceMatch?.[1]?.toLowerCase() ?? "unknown") as DebateStance;
 	const sidesWith = sidesMatch?.[1]?.trim();
