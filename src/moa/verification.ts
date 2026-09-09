@@ -525,11 +525,17 @@ export async function runImplementationVerification(
 		try {
 			for (const script of scripts) {
 				const slot = scriptRun.add(script);
-				scriptResults.push(await runVerifyScript(ctx.cwd, script, slot.signal));
+				const result = await runVerifyScript(ctx.cwd, script, slot.signal);
 				if (scriptRun.cancelAllRequested) break;
+				scriptResults.push(result);
 			}
 		} finally {
 			host.setActiveCancelSession(undefined);
+		}
+		if (scriptRun.cancelAllRequested) {
+			widget?.settleRoleRow("Verify", "cancelled");
+			host.stopActiveProgressWidget();
+			return;
 		}
 	}
 
