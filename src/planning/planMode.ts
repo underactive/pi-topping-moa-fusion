@@ -156,10 +156,16 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		applyReadOnlyProviderEnv();
 		pi.setActiveTools(getPlanModeTools(toolsBeforePlanMode));
 	};
+	const deactivatePlanOnlyTools = (): void => {
+		const active = pi.getActiveTools();
+		const filtered = active.filter((name) => !PLAN_ONLY_REGISTERED_TOOLS.includes(name));
+		if (filtered.length !== active.length) pi.setActiveTools(filtered);
+	};
 	const restoreNormalModeTools = (): void => {
 		const restored = toolsBeforePlanMode ?? pi.getActiveTools();
 		restoreReadOnlyProviderEnv();
-		pi.setActiveTools(restored.filter((name) => !PLAN_ONLY_REGISTERED_TOOLS.includes(name)));
+		pi.setActiveTools(restored);
+		deactivatePlanOnlyTools();
 		toolsBeforePlanMode = undefined;
 	};
 	const questionnaireBusy = (ctx: ExtensionContext): boolean => {
@@ -336,6 +342,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		enterFromTool,
 		abortPlanMode,
 		exitPlanMode,
+		deactivatePlanOnlyTools,
 		clearCompletedPlan,
 		openCancelOverlayIfActive,
 		openObserveOverlayIfActive,
@@ -475,7 +482,10 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				persistState();
 				return { message: { customType: PLAN_EXIT_CONTEXT_TYPE, content: buildPlanModeExitInstructions(), display: false } };
 			}
-			if (!planModeEnabled) return;
+			if (!planModeEnabled) {
+				deactivatePlanOnlyTools();
+				return;
+			}
 			const instructions = lastReentryState ? buildPlanModeReentryInstructions() : buildPlanModeInstructions(isAskUserQuestionInstalled(pi));
 			if (lastReentryState) lastReentryState = false;
 			return { message: { customType: PLAN_MODE_CONTEXT_TYPE, content: instructions, display: false } };
@@ -524,7 +534,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				lastReentryState = getPlan() !== null;
 				enablePlanModeTools();
 			} else {
-				pi.setActiveTools(pi.getActiveTools().filter((name) => !PLAN_ONLY_REGISTERED_TOOLS.includes(name)));
+				deactivatePlanOnlyTools();
 			}
 			updateStatus(ctx);
 		},

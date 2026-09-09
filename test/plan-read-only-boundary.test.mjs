@@ -56,14 +56,17 @@ assert.equal(READ_ONLY_SUBAGENT_ENV.PI_CLAUDE_BRIDGE_FORCE_MODE, "read");
 assert.match(runner, /env: \{ \.\.\.process\.env, \.\.\.READ_ONLY_SUBAGENT_ENV, \.\.\.USAGE_BEACON_SUBAGENT_ENV \}/);
 assert.match(runner, /const USAGE_BEACON_SUBAGENT_ENV = Object\.freeze\(\{ PI_USAGE_BEACON: "1" \}\)/);
 assert.match(orchestration, /applyReadOnlyProviderEnv\(\);\s*\n\s*pi\.setActiveTools\(getPlanModeTools\(toolsBeforePlanMode\)\);/);
-assert.match(orchestration, /restoreReadOnlyProviderEnv\(\);\s*\n\s*pi\.setActiveTools\(restored\.filter\(\(name\) => !PLAN_ONLY_REGISTERED_TOOLS\.includes\(name\)\)\);/);
+assert.match(orchestration, /restoreReadOnlyProviderEnv\(\);\s*\n\s*pi\.setActiveTools\(restored\);\s*\n\s*deactivatePlanOnlyTools\(\);/);
 
 // Plan-mode-only registered tools (write_plan, exit_plan_mode, mf_plan_subagent)
 // must be deactivated in sessions that are NOT in plan mode — registerTool()
 // activates them session-wide, and models were picking mf_plan_subagent over
 // the general-purpose subagent tool during normal agentic sessions.
 assert.match(orchestration, /const PLAN_ONLY_REGISTERED_TOOLS = \["write_plan", "exit_plan_mode", "mf_plan_subagent"\]/);
-assert.match(orchestration, /\} else \{[^}]*pi\.setActiveTools\(pi\.getActiveTools\(\)\.filter\(\(name\) => !PLAN_ONLY_REGISTERED_TOOLS\.includes\(name\)\)\);[^}]*\}\s*\n\s*updateStatus\(ctx\);/);
+assert.match(orchestration, /\} else \{\s*deactivatePlanOnlyTools\(\);\s*\}\s*\n\s*updateStatus\(ctx\);/);
+assert.match(orchestration, /if \(!planModeEnabled\) \{\s*deactivatePlanOnlyTools\(\);\s*return;\s*\}/);
+assert.match(orchestration, /registerExitPlanModeTool\(pi, controller\);\s*controller\.deactivatePlanOnlyTools\(\);/);
+assert.match(orchestration, /if \(controller\.questionnaireBusy\(ctx\)\) return;\s*\n\s*if \(controller\.isEnabled\(\)\) controller\.exitPlanMode\(ctx\);\s*\n\s*let handoff = controller\.getImplementationHandoff\(\);/);
 
 // Restoring the env on approval is inert for a running agentic-bridge query — it
 // keeps the read-only tool set it was created with for the whole planning turn,

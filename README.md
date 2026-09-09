@@ -205,7 +205,7 @@ Seven agent definitions are auto-installed to `~/.pi/agent/agents/` on first run
 | `moa-explore` | Single-model (Phase 1) | Fast codebase recon | Its own frontmatter, via `/mf-plan-settings` (haiku by default) |
 | `mf-plan` | Single-model (Phase 2) | Turns exploration context into a detailed plan | **The session's active model** — whatever you picked in the "Single model" picker. No settings slot |
 
-MoA never invokes `moa-explore` or `mf-plan` — each `moa-proposer` is a self-contained fusion of both roles, doing its own exploration so the proposals stay independent. (The `mf_plan_subagent` tool does stay available after synthesis, so refining an MoA plan by hand can still spawn them.)
+MoA never invokes `moa-explore` or `mf-plan` — each `moa-proposer` is a self-contained fusion of both roles, doing its own exploration so the proposals stay independent. The plan-only tools (`write_plan`, `exit_plan_mode`, and `mf_plan_subagent`) are active only while `/mf-plan` or single-model plan mode is on.
 
 Every planning subprocess is forced through a runtime `read,grep,find,ls` allowlist, even when an installed agent definition is stale, customized, or omits its `tools` field.
 

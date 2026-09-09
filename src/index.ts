@@ -81,6 +81,7 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 		description: "Retry implementation of the last approved MoA plan, optionally with a different model",
 		handler: async (_args, ctx) => {
 			if (controller.questionnaireBusy(ctx)) return;
+			if (controller.isEnabled()) controller.exitPlanMode(ctx);
 			let handoff = controller.getImplementationHandoff();
 			let plan: string | null = null;
 			let filePath = getPlanFilePath();
@@ -272,6 +273,7 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 	registerWritePlanTool(pi, controller.isEnabled);
 	registerMfPlanSubagentTool(pi, controller);
 	registerExitPlanModeTool(pi, controller);
+	controller.deactivatePlanOnlyTools();
 
 	pi.on("context", controller.onContext);
 	pi.on("before_agent_start", controller.onBeforeAgentStart);
