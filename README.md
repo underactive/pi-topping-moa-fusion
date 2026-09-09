@@ -2,7 +2,7 @@
 
 A Pi extension built around **Mixture of Agents (MoA)** planning: several models independently explore your repo, each writes a complete implementation plan, and a synthesizer reconciles them into one stronger plan — surfacing every disagreement as a decision you get to make.
 
-<img src="docs/images/mf-plan-workflow-animated.svg" alt="/mf-plan workflow" width="100%">
+<img src="https://raw.githubusercontent.com/underactive/pi-topping-moa-fusion/main/docs/images/mf-plan-workflow-animated.svg" alt="/mf-plan workflow" width="100%">
 
 ## Contents
 
