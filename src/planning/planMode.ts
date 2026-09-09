@@ -91,6 +91,9 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	// The one MoA progress table, adopted from orchestration on approval and kept
 	// alive across in-session implementation and verification.
 	let activeProgressWidget: MoaProgressWidget | undefined;
+	// Orchestration publishes its widget here before approval, while fan-out,
+	// synthesis and review still own the table.
+	let runningProgressWidget: MoaProgressWidget | undefined;
 	// In-session implementer telemetry, reset each time implementation starts.
 	let implementationOutputTracker: OutputActivityTracker | undefined;
 	let implementationMessages: Message[] = [];
@@ -321,6 +324,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			activeProgressWidget = widget;
 		},
 		getActiveProgressWidget: () => activeProgressWidget,
+		getRunningProgressWidget: () => runningProgressWidget,
+		setRunningProgressWidget: (widget) => { runningProgressWidget = widget; },
 		stopActiveProgressWidget,
 		setActiveCancelSession: (session) => { activeCancelSession = session; },
 	};
@@ -337,6 +342,13 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		clearCompletedPlan,
 		openCancelOverlayIfActive,
 		openObserveOverlayIfActive,
+		toggleLivePreview: (ctx: ExtensionContext): void => {
+			if (questionnaireBusy(ctx)) return;
+			const widget = runningProgressWidget ?? activeProgressWidget;
+			if (!widget) return;
+			const visible = widget.togglePreview();
+			ctx.ui.notify(visible ? "Live preview shown." : "Live preview hidden.");
+		},
 		isAskUserQuestionActive: () => askUserQuestionTracker.isActive(),
 		questionnaireBusy,
 		getActiveCancelSession: () => activeCancelSession,
@@ -526,6 +538,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			lastImplementationReport = undefined;
 			resetImplementationTranscript();
 			stopActiveProgressWidget();
+			runningProgressWidget = undefined;
 			restoreReadOnlyProviderEnv();
 			cleanupTrackedProcesses();
 		},

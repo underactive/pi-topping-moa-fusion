@@ -105,7 +105,7 @@ While an agent is working, its row also shows a dim, guttered preview of the lat
 
 Proposer and synthesizer rows are fed by the subagent processes. The Implement row is the model running in your own session: its turns, tool calls, output meter, and cost are collected live from pi's lifecycle events while the approved plan is being implemented. The Verify row is fed by the verifier subprocess; when you send verifier findings back to the implementer, the Implement row reactivates in the same table. The table closes when verification finishes, when an implementation is cancelled or paused with "Continue manually", or when the session shuts down.
 
-Press `F3` during a run to open a read-only observer of any agent's streamed output.
+Press `F2` to toggle the inline/live preview of streamed agent output shown under each row, or `F3` during a run to open a read-only observer of any agent's streamed output.
 
 ### Opinions (`/mf-opinion`)
 
@@ -141,6 +141,7 @@ During the run, `F3` opens the live observer and `Esc` or `F4` opens cancellatio
 | `/mf-plan-implement` | — | Retry implementation of the last approved MoA plan, optionally with a different model |
 | `/mf-plan-clear` | — | Clear completed plan state so the next `/mf-plan` starts a fresh round; approved plans stay in `.pi/mf-plan/` and remain re-implementable |
 | `--mf-plan` | — | Start pi with plan mode enabled |
+| — | `F2` (during MoA runs) | Toggle the inline/live preview of streamed agent output |
 | — | `F3` (during MoA runs) | Open a read-only observer of streamed proposer/synthesizer output |
 | — | `Esc` (during MoA runs) / `F4` | Open the cancel overlay: kill one stuck subagent or cancel all |
 

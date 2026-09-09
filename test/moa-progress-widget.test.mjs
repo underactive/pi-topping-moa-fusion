@@ -174,7 +174,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	assert.match(lines[0], /^══ MoA Fusion ═+ voice-transcribe-plan ══$/);
 	assert.match(lines[1], /MODEL.*CTX.*MONITOR.*ACTIVITY.*TURNS.*TOOLS.*COST.*TIME/);
 	assert.match(lines[2], /── Plan /, "the first phase group carries a heading");
-	assert.match(lines.at(-2), /esc cancel · f3 observe/);
+	assert.match(lines.at(-2), /esc cancel · f2 preview · f3 observe/);
 	assert.match(lines.at(-1), /^═+$/);
 	assert.match(lines.at(-3), /^─+$/, "the footer separator stays single-line");
 
@@ -392,6 +392,39 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.stopWidget();
 }
 
+// ── F2 toggles live transcript previews without touching activity rows ───
+{
+	const { ctx, current } = fakeCtx("tui", TAGGED_THEME);
+	const widget = new MoaProgressWidget(ctx, () => CONTEXT_WINDOW, {}, PLAN_NAME);
+	widget.startFanout(PROPOSERS);
+	widget.updateActivity(0, "read a.ts");
+	widget.updateActivity(1, "read b.ts");
+	widget.updateTranscript(0, [assistantMessage("first proposer newest")]);
+	widget.updateTranscript(1, [assistantMessage("second proposer newest")]);
+	const component = current();
+
+	assert.equal(widget.previewVisible, true, "previews render by default");
+	const initial = component.render(80).map(strip);
+	assert.equal(initial.filter((l) => l.includes("↳ read")).length, 2, "both activity rows render before any toggle");
+	assert.ok(initial.some((l) => l.includes("│ ")), "preview rows render before any toggle");
+
+	const afterFirstToggle = widget.togglePreview();
+	assert.equal(afterFirstToggle, false, "togglePreview reports the new visibility");
+	assert.equal(widget.previewVisible, false);
+	const hidden = component.render(80).map(strip);
+	assert.equal(hidden.filter((l) => l.includes("↳ read")).length, 2, "activity rows survive hiding previews");
+	assert.ok(!hidden.some((l) => l.includes("│ ")), "preview rows are hidden after the first toggle");
+
+	const afterSecondToggle = widget.togglePreview();
+	assert.equal(afterSecondToggle, true, "a second toggle restores visibility");
+	assert.equal(widget.previewVisible, true);
+	const restored = component.render(80).map(strip);
+	assert.equal(restored.filter((l) => l.includes("↳ read")).length, 2, "activity rows remain after restoring previews");
+	assert.ok(restored.some((l) => l.includes("│ first proposer newest")), "the first preview is restored");
+	assert.ok(restored.some((l) => l.includes("│ second proposer newest")), "the second preview is restored");
+	widget.stopWidget();
+}
+
 // ── agent rows reserve activity slots, which yield on short terminals ────
 {
 	const { widget, current } = makeWidget();
@@ -434,7 +467,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	assert.equal(tight.filter((l) => l.includes("↳")).length, 0, "sub-rows yield first when space is tight");
 	assert.ok(tight.some((l) => l.includes("anthropic/claude-opus-4")));
 	assert.ok(tight.some((l) => l.includes("openai/gpt-5")));
-	assert.ok(tight.some((l) => l.includes("esc cancel · f3 observe")), "footer must survive");
+	assert.ok(tight.some((l) => l.includes("esc cancel · f2 preview · f3 observe")), "footer must survive");
 	widget.stopWidget();
 }
 

@@ -255,6 +255,10 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 		description: "Observe running plan agents",
 		handler: async (ctx) => { if (controller.questionnaireBusy(ctx)) return; controller.openObserveOverlayIfActive(ctx); },
 	});
+	pi.registerShortcut(Key.f2, {
+		description: "Toggle the live preview under tool activity",
+		handler: async (ctx) => { controller.toggleLivePreview(ctx); },
+	});
 
 	registerEnterPlanModeTool(pi, controller);
 	registerWritePlanTool(pi, controller.isEnabled);

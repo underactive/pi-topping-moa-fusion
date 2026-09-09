@@ -194,7 +194,7 @@ try {
 			registerShortcut: (key, options) => shortcutCalls.push({ key, options }),
 		});
 		assert.equal(typeof extensionCommands.get("mf-plan-clear")?.handler, "function");
-		assert.deepEqual(shortcutCalls.map((call) => call.key).sort(), ["f3", "f4"]);
+		assert.deepEqual(shortcutCalls.map((call) => call.key).sort(), ["f2", "f3", "f4"]);
 	}
 
 	// 11. Companion fix: re-entering plan mode suppresses the stale exit reminder.

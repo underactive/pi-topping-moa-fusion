@@ -89,7 +89,7 @@ assert.doesNotMatch(orchestration, /terminate: true/);
 // and terminates tracked subprocesses.
 assert.match(
 	orchestration,
-	/onSessionShutdown: \(_event: \{ reason: string \}\) => \{\s*implementationPending = false;\s*lastImplementationStopReason = undefined;\s*lastImplementationReport = undefined;\s*resetImplementationTranscript\(\);\s*stopActiveProgressWidget\(\);\s*restoreReadOnlyProviderEnv\(\);\s*cleanupTrackedProcesses\(\);/,
+	/onSessionShutdown: \(_event: \{ reason: string \}\) => \{\s*implementationPending = false;\s*lastImplementationStopReason = undefined;\s*lastImplementationReport = undefined;\s*resetImplementationTranscript\(\);\s*stopActiveProgressWidget\(\);\s*runningProgressWidget = undefined;\s*restoreReadOnlyProviderEnv\(\);\s*cleanupTrackedProcesses\(\);/,
 );
 
 // ── The read-only verifier subprocess is spawned like every planning agent ──

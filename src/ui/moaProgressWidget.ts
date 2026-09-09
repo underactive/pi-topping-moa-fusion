@@ -20,7 +20,7 @@
  * plus settled traces keep their existing dimming under whichever hue applies.
  *
  * Widgets never take keyboard focus, so the default editor keeps it and pi
- * dispatches f3/f4 through the extension shortcuts registered in index.ts.
+ * dispatches f2/f3/f4 through the extension shortcuts registered in index.ts.
  * ESC likewise stays with index.ts's raw terminal-input hook. Nothing here
  * handles input.
  */
@@ -89,7 +89,7 @@ type ContextWindowResolver = (ref: ModelRef) => number | undefined;
 const ACTIVITY_WINDOW = 8;
 
 const TABLE_TITLE = "MoA Fusion";
-const TABLE_FOOTER = "esc cancel · f3 observe";
+const TABLE_FOOTER = "esc cancel · f2 preview · f3 observe";
 /** Shortest rule run allowed between the title and the plan name before the name is dropped. */
 const MIN_TITLE_NAME_GAP = 2;
 /**
@@ -199,6 +199,8 @@ export interface MoaProgressView {
 	readonly title: string;
 	/** Summarized plan name, shown right-aligned in the title bar. */
 	readonly planName: string | undefined;
+	/** Whether live transcript previews are currently shown beneath active rows. */
+	readonly previewVisible: boolean;
 	/** Display label for a phase without changing its internal identity. */
 	phaseLabel(phase: MoaPhase): string;
 	/** Model assigned to each phase, for the band above the table header. */
@@ -246,6 +248,8 @@ export class MoaProgressWidget implements MoaProgressView {
 	private models: PhaseModels = {};
 	private active: MoaPhase | undefined;
 	private tableMounted = false;
+	private showPreview = true;
+	private requestRender: (() => void) | undefined;
 
 	constructor(
 		ctx: ExtensionContext,
@@ -264,10 +268,23 @@ export class MoaProgressWidget implements MoaProgressView {
 		return this.ctx.ui;
 	}
 
+	get previewVisible(): boolean {
+		return this.showPreview;
+	}
+
+	togglePreview(): boolean {
+		this.showPreview = !this.showPreview;
+		this.requestRender?.();
+		return this.showPreview;
+	}
+
 	private mountTable(): void {
 		if (this.tableMounted) return;
 		this.tableMounted = true;
-		this.ui.setWidget(WIDGET_KEY, (tui, theme) => new MoaProgressTableComponent(tui, theme, this));
+		this.ui.setWidget(WIDGET_KEY, (tui, theme) => {
+			this.requestRender = () => tui.requestRender();
+			return new MoaProgressTableComponent(tui, theme, this);
+		});
 	}
 
 	private unmount(): void {
@@ -275,6 +292,7 @@ export class MoaProgressWidget implements MoaProgressView {
 			this.tableMounted = false;
 			this.callbacks.closeStacked?.();
 		}
+		this.requestRender = undefined;
 		this.ui.setWidget(WIDGET_KEY, undefined);
 	}
 
@@ -756,7 +774,7 @@ export class MoaProgressTableComponent implements Component {
 		let remaining = Math.max(0, free - renderedActivityIndices.size);
 
 		const previewWidth = Math.max(0, leftTableWidth - PREVIEW_INDENT - visibleWidth(PREVIEW_GUTTER));
-		const previewIndices = previewWidth >= PREVIEW_MIN_WIDTH
+		const previewIndices = this.view.previewVisible && previewWidth >= PREVIEW_MIN_WIDTH
 			? activeIndices.filter((index) => rows[index]?.transcript)
 			: [];
 		const previewAllocations = new Map<number, number>();

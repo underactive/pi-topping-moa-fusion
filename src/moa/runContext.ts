@@ -37,6 +37,9 @@ export interface MoaRunHost {
 	 */
 	adoptProgressWidget(widget: MoaProgressWidget): void;
 	getActiveProgressWidget(): MoaProgressWidget | undefined;
+	/** The orchestration widget while a run is in fan-out, synthesis, or review. */
+	getRunningProgressWidget(): MoaProgressWidget | undefined;
+	setRunningProgressWidget(widget: MoaProgressWidget | undefined): void;
 	stopActiveProgressWidget(): void;
 	/**
 	 * Publish (or clear) the F4-cancellable session the input triggers open the

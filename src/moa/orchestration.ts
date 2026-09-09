@@ -31,6 +31,7 @@ export async function runMoaOrchestration(
 			runContext.observeSession?.closeOverlay?.();
 		},
 	}, host.getPlanRepoSlug());
+	host.setRunningProgressWidget(widget);
 	widget.setPhaseModels({
 		Plan: proposers,
 		Synthesize: synthesizer,
@@ -91,6 +92,7 @@ export async function runMoaOrchestration(
 		if (synthesis.status !== "review") return synthesis.status;
 		return await runReviewLoop(synthesis.options);
 	} finally {
+		if (host.getRunningProgressWidget() === widget) host.setRunningProgressWidget(undefined);
 		if (host.getActiveProgressWidget() !== widget) widget.stopWidget();
 		session.run = undefined;
 		session.getExtras = undefined;

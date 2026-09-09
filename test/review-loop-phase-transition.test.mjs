@@ -18,6 +18,7 @@ const agentDir = mkdtempSync(path.join(tmpdir(), "moa-review-transition-"));
 process.env.PI_CODING_AGENT_DIR = agentDir;
 
 const { runReviewLoop } = await import("../src/moa/reviewLoop.ts");
+const { runMoaOrchestration } = await import("../src/moa/orchestration.ts");
 
 const SYNTHESIZER = { provider: "openai", id: "gpt-synth" };
 const IMPLEMENTER = { provider: "openai", id: "gpt-implement" };
@@ -165,6 +166,65 @@ try {
 		["synthesizing", SYNTHESIZER, "synthesizing plan…", "low"],
 		["synthesizing", SYNTHESIZER, "synthesizing plan…", "xhigh"],
 	], "each chat round reads the current synthesizer thinking selection afresh");
+
+	// Orchestration publishes its widget to the host's running-progress-widget
+	// slot before fan-out starts and clears it in its `finally`, so an F4
+	// cancel overlay or a `/reload` mid-run can always find (or no longer
+	// find) the live run's widget. An empty proposer list is not a fragile
+	// mock: it drives the real fan-out phase through its own "all proposers
+	// failed" fallback (see fanout.ts's `succeeded.length === 0` branch)
+	// without spawning any agent process, so the slot's set/clear ordering is
+	// observed around genuine orchestration code rather than stubbed phases.
+	const lifecycleCalls = [];
+	let runningWidget;
+	let lifecycleComponent;
+	const lifecycleCtx = {
+		mode: "print",
+		cwd: agentDir,
+		ui: {
+			// Mirrors pi's setWidget replace/dispose semantics: disposing the
+			// mounted table clears its meter-sampling ticker, so a stray timer
+			// cannot fire (and crash) after orchestration returns.
+			setWidget: (_key, factory) => {
+				lifecycleComponent?.dispose?.();
+				lifecycleComponent = undefined;
+				if (factory) lifecycleComponent = factory({ requestRender: () => {} }, {});
+			},
+			notify: () => {},
+			select: async () => assert.fail("an empty proposer list must not reach any UI prompt"),
+		},
+	};
+	const lifecycleHost = {
+		pi: { sendUserMessage: () => lifecycleCalls.push(["message"]) },
+		getPlanRepoSlug: () => undefined,
+		getActiveObserveSession: () => undefined,
+		setActiveObserveSession: () => {},
+		getRunningProgressWidget: () => runningWidget,
+		setRunningProgressWidget: (widget) => {
+			runningWidget = widget;
+			lifecycleCalls.push(["runningWidget", widget ? "set" : "clear"]);
+		},
+		getActiveProgressWidget: () => undefined,
+	};
+
+	const status = await runMoaOrchestration(
+		lifecycleHost,
+		lifecycleCtx,
+		"do the thing",
+		[],
+		SYNTHESIZER,
+		[],
+		"medium",
+		{},
+	);
+
+	assert.equal(status, "done", "an empty proposer list falls through fan-out's all-failed path");
+	assert.deepEqual(
+		lifecycleCalls.map((call) => call[0] === "runningWidget" ? call.join(":") : call[0]),
+		["runningWidget:set", "message", "runningWidget:clear"],
+		"the running-progress-widget slot is set before fan-out and cleared in orchestration's finally",
+	);
+	assert.equal(lifecycleHost.getRunningProgressWidget(), undefined, "the slot is empty once orchestration returns");
 
 	console.log("Review-loop phase transition tests passed.");
 } finally {
