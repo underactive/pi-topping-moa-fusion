@@ -12,10 +12,9 @@ import { CancelRun, type CancelRowExtras, type CancelSession } from "../../runti
 import { MutationTripwire, formatMutationWarning } from "../../runtime/mutationTripwire.ts";
 import { getFinalOutput, getResultOutput, isFailedResult, truncateOutput } from "../../runtime/results.ts";
 import { runParallelAgents, runSingleAgent } from "../../runtime/runner.ts";
-import { type ThinkingLevel } from "../../shared/modelRefs.ts";
+import { parseRef as parseModelRefLabel, type ThinkingLevel } from "../../shared/modelRefs.ts";
 import { activityLoopCount } from "../../ui/agentStatus.ts";
 import { showCancelOverlay } from "../../ui/cancelOverlay.ts";
-import { parseRef as parseModelRefLabel } from "../../ui/twoPaneModelThinking.ts";
 import { PLAN_SUBAGENT_NAMES } from "./shared.ts";
 
 export interface MfPlanSubagentHost {

@@ -12,6 +12,7 @@ import {
 import {
 	isThinkingLevel,
 	modelRefLabel,
+	parseRef,
 	THINKING_LEVELS,
 	type ModelRef,
 	type ThinkingLevel,
@@ -26,12 +27,6 @@ function modelThinkingPaneWidths(bodyWidth: number): { left: number; right: numb
 	const rightMin = Math.max(visibleWidth(" Thinking"), visibleWidth(`→ ${longestLevel}`) + 3);
 	const right = Math.max(1, Math.min(rightMin, Math.max(1, bodyWidth - divider - 1)));
 	return { left: Math.max(1, bodyWidth - divider - right), right };
-}
-
-export function parseRef(value: string): ModelRef {
-	const idx = value.indexOf("/");
-	if (idx === -1) return { provider: value, id: "" };
-	return { provider: value.slice(0, idx), id: value.slice(idx + 1) };
 }
 
 function toModelItems(refs: ModelRef[]): SelectItem[] {

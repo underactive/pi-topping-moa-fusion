@@ -9,7 +9,7 @@
  */
 
 import { getSupportedThinkingLevels, type Api, type Model } from "@earendil-works/pi-ai";
-import { isThinkingLevel, modelRefLabel, type ModelRef, type ThinkingLevel } from "../shared/modelRefs.ts";
+import { isThinkingLevel, modelRefLabel, parseRef, type ModelRef, type ThinkingLevel } from "../shared/modelRefs.ts";
 
 export interface ModelCatalogue {
 	/** Selectable models, sorted by `provider/id`. */
@@ -45,10 +45,7 @@ function buildCatalogue(registry: CatalogueRegistry): ModelCatalogue {
 
 	const refs = [...levels.keys()]
 		.sort((a, b) => a.localeCompare(b))
-		.map((key) => {
-			const slash = key.indexOf("/");
-			return { provider: key.slice(0, slash), id: key.slice(slash + 1) };
-		});
+		.map((key) => parseRef(key));
 
 	return {
 		availableRefs: () => [...refs],

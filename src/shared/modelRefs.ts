@@ -31,6 +31,12 @@ export function modelRefLabel(ref: ModelRef): string {
 	return `${ref.provider}/${ref.id}`;
 }
 
+export function parseRef(value: string): ModelRef {
+	const idx = value.indexOf("/");
+	if (idx === -1) return { provider: value, id: "" };
+	return { provider: value.slice(0, idx), id: value.slice(idx + 1) };
+}
+
 /**
  * Anonymous slot label substituted for the real `modelRefLabel(ref)` in the
  * synthesizer's input ONLY. Blinding prevents the synthesizer from favoring a
