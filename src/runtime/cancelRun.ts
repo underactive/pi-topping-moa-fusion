@@ -1,3 +1,6 @@
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { isKeyRelease, Key, matchesKey } from "@earendil-works/pi-tui";
+
 /**
  * Cancellation registry for in-flight subagent processes.
  *
@@ -99,4 +102,33 @@ export interface CancelSession {
 	overlayOpen: boolean;
 	/** Registered by the overlay while open so orchestrators can force-close it before competing UIs. */
 	closeOverlay?: () => void;
+}
+
+export interface CancelOverlayEscHost {
+	getActiveObserveSession(): { overlayOpen: boolean } | undefined;
+	openCancelOverlayIfActive(ctx: ExtensionContext): boolean;
+}
+
+/**
+ * Subscribes ESC to open the cancel overlay while `session.run` is in
+ * flight, passing ESC through otherwise so the editor, model pickers, and
+ * observe overlay keep their own ESC handling. Terminal input listeners run
+ * ahead of pi's key-release filter, so under the Kitty keyboard protocol the
+ * ESC *release* arrives here a tick after the press closed an overlay and
+ * cleared `overlayOpen` — reopening it instantly. Only a key press may open
+ * the overlay. Returns undefined outside the TUI.
+ */
+export function subscribeCancelOverlayOnEsc(
+	ctx: ExtensionContext,
+	host: CancelOverlayEscHost,
+	session: CancelSession,
+): (() => void) | undefined {
+	if (ctx.mode !== "tui") return undefined;
+	return ctx.ui.onTerminalInput((data) => {
+		if (isKeyRelease(data) || !matchesKey(data, Key.escape)) return undefined;
+		if (host.getActiveObserveSession()?.overlayOpen) return undefined;
+		if (session.overlayOpen) return undefined;
+		if (!session.run) return undefined;
+		return host.openCancelOverlayIfActive(ctx) ? { consume: true } : undefined;
+	});
 }
