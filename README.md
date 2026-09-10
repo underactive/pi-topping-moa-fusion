@@ -251,7 +251,7 @@ Names are 1–24 alphanumeric characters, unique case-insensitively, up to 20 ro
 
 **First run.** Until the setup overlay has been saved once, `/mf-plan` opens it — set up agents and rosters before planning — instead of the plan prompt. Only interactive TUI sessions are gated; headless plan mode is unaffected.
 
-**Agentic provider bridges.** Some pi providers are not plain chat-completion APIs but bridges to full coding agents with their *own* local edit/shell tools (e.g. [pi-cursor-bridge](../cursor-bridge), whose models run Cursor agents in the repo cwd). Pi's tool allowlist cannot restrain those agent-side tools, so plan mode adds two more layers:
+**Agentic provider bridges.** Some pi providers are not plain chat-completion APIs but bridges to full coding agents with their *own* local edit/shell tools (e.g. pi-cursor-bridge, whose models run Cursor agents in the repo cwd). Pi's tool allowlist cannot restrain those agent-side tools, so plan mode adds two more layers:
 
 - **Read-only env handshake** — every planning subprocess is spawned with `PI_CURSOR_FORCE_MODE=plan`, and the parent session sets it while plan mode is active. cursor-bridge maps this to Cursor's native read-only *plan* mode (SDK `mode: "plan"`; CLI `--mode plan` without `--force`).
 - **Mutation tripwire** — `git status --porcelain` is snapshotted before subagents launch and re-checked after every phase. If the working tree changed while planning agents ran, a warning lists the touched files so rogue edits are never silently absorbed.
