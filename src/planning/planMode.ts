@@ -464,8 +464,22 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				}
 			}
 
+			// Both async flows below outlive this handler and may reject after a
+			// /reload (or session swap) has made `ctx` stale. pi's ctx getters then
+			// throw synchronously, so the rejection handler must not touch ctx.ui
+			// unguarded — an exception inside .catch becomes an unhandled rejection
+			// that takes the whole process down.
+			const reportFlowFailure = (flow: string) => (err: unknown) => {
+				const detail = err instanceof Error ? err.message : String(err);
+				try {
+					ctx.ui.notify(`${flow} could not run: ${detail}`, "error");
+				} catch {
+					// ctx is stale (replaced/reloaded); nothing left to notify against.
+				}
+			};
 			if (implementationTurnFailed(stopReason) && implementationHandoff) {
-				void runImplementationRetryFlow(ctx, moaRunHost, implementationHandoff);
+				void runImplementationRetryFlow(ctx, moaRunHost, implementationHandoff)
+					.catch(reportFlowFailure("Implementation retry"));
 				return;
 			}
 			// A user-cancelled implementation must NOT be verified. implementationTurnFailed
@@ -476,7 +490,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			const verifier = implementationHandoff.verifier ?? loadMoaConfig().verifier;
 			if (verifier) {
 				void runImplementationVerification(ctx, moaRunHost, { ...implementationHandoff, verifier }, report)
-					.catch((err) => ctx.ui.notify(`Verification could not run: ${err instanceof Error ? err.message : String(err)}`, "error"));
+					.catch(reportFlowFailure("Verification"));
 			}
 		},
 		onContext: async (event: { messages: AgentMessage[] }) => {

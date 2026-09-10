@@ -317,6 +317,36 @@ try {
 		assert.equal(controller.moaRunHost.getActiveProgressWidget(), undefined);
 	}
 
+	// ── a stale ctx (post-/reload) must not escape as an unhandled rejection ──
+	// Regression: pi's ctx getters throw once the extension is reloaded. The
+	// verification flow rejected on the stale ctx and the .catch handler then
+	// called ctx.ui.notify on the same stale ctx, which threw inside the
+	// rejection handler and crashed pi with an uncaughtException.
+	for (const stopReason of ["stop", "error"]) {
+		const { ctx, controller } = adoptedRun();
+		controller.setImplementationHandoff({ ...HANDOFF, verifier: SYNTHESIZER });
+		runTurn(controller, ctx, { message: assistantMessage({ stopReason }) });
+		const staleError = () => new Error("This extension ctx is stale after session replacement or reload.");
+		const staleCtx = {
+			get ui() { throw staleError(); },
+			get cwd() { throw staleError(); },
+			get hasUI() { throw staleError(); },
+			get mode() { throw staleError(); },
+			modelRegistry: ctx.modelRegistry,
+		};
+		const unhandled = [];
+		const onUnhandled = (reason) => unhandled.push(reason);
+		process.on("unhandledRejection", onUnhandled);
+		try {
+			assert.doesNotThrow(() => controller.onAgentSettled({ type: "agent_settled" }, staleCtx));
+			for (let i = 0; i < 5; i++) await new Promise((resolve) => setImmediate(resolve));
+			assert.deepEqual(unhandled, [], `stopReason=${stopReason}: a stale ctx in the post-settle flow must be swallowed, not crash the process`);
+		} finally {
+			process.off("unhandledRejection", onUnhandled);
+			controller.onSessionShutdown({ reason: "test" });
+		}
+	}
+
 	console.log("Implementation progress tests passed.");
 } finally {
 	rmSync(agentDir, { recursive: true, force: true });
