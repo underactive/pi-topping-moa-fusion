@@ -19,4 +19,5 @@
 - Fixed summarized plan names falling back to random slugs when the naming model returned no visible text.
 - Fixed `/reload` failing when the extension tried to change active tools during extension loading.
 - Fixed plan-only tools leaking into normal sessions, including implementation kickoff turns from `/mf-plan-implement` while plan mode was still enabled.
+- Fixed raw press-only F2 handling, including Kitty-encoded F-keys and release events; non-silent feedback now appears when no preview is available, and `/mf-preview` provides a fallback when F2 interception is unreliable.
 - Fixed two-pane model picker selection highlight to span the full pane width and appear only on the active pane.

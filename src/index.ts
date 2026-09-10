@@ -57,6 +57,10 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 		description: "Toggle 'Mixture of Agents' plan mode — append a prompt (e.g. /mf-plan add dark mode) to skip the editor",
 		handler: async (args, ctx) => togglePlanMode(ctx, args.trim() || undefined),
 	});
+	pi.registerCommand("mf-preview", {
+		description: "Toggle the MoA live preview under the agent table in the active run",
+		handler: async (_args, ctx) => { controller.toggleLivePreview(ctx); },
+	});
 	pi.registerCommand("mf-opinion", {
 		description: "Ask up to 5 models for independent read-only opinions — append a question (e.g. /mf-opinion is X sound?) to skip the editor",
 		handler: async (args, ctx) => { if (controller.questionnaireBusy(ctx)) return; await runInteractiveOpinion(pi, opinionHost, ctx, args.trim() || undefined); },

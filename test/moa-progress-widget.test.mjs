@@ -425,6 +425,32 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.stopWidget();
 }
 
+// ── snapshots recorded while hidden render immediately after togglePreview ──
+{
+	const { ctx, current } = fakeCtx("tui", TAGGED_THEME);
+	const widget = new MoaProgressWidget(ctx, () => CONTEXT_WINDOW, {}, PLAN_NAME);
+	widget.startFanout(PROPOSERS);
+	widget.updateActivity(0, "read a.ts");
+	widget.updateActivity(1, "read b.ts");
+	const component = current();
+
+	assert.equal(widget.togglePreview(), false, "preview hidden");
+	widget.updateTranscript(0, [assistantMessage("hidden-proposer-0")]);
+	widget.updateTranscript(1, [assistantMessage("hidden-proposer-1")]);
+	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing…");
+	widget.updateRoleTranscript("Synthesize", [assistantMessage("hidden-synthesizer")]);
+
+	const hidden = component.render(80).map(strip);
+	assert.ok(!hidden.some((line) => line.includes("│ ")), "preview rows stay hidden");
+
+	assert.equal(widget.togglePreview(), true, "preview restored");
+	const restored = component.render(80).map(strip);
+	assert.ok(restored.some((line) => line.includes("hidden-proposer-0")), "proposer 0 snapshot displays after re-show");
+	assert.ok(restored.some((line) => line.includes("hidden-proposer-1")), "proposer 1 snapshot displays after re-show");
+	assert.ok(restored.some((line) => line.includes("hidden-synthesizer")), "role snapshot displays after re-show");
+	widget.stopWidget();
+}
+
 // ── agent rows reserve activity slots, which yield on short terminals ────
 {
 	const { widget, current } = makeWidget();

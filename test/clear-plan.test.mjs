@@ -194,6 +194,7 @@ try {
 			registerShortcut: (key, options) => shortcutCalls.push({ key, options }),
 		});
 		assert.equal(typeof extensionCommands.get("mf-plan-clear")?.handler, "function");
+		assert.equal(typeof extensionCommands.get("mf-preview")?.handler, "function");
 		assert.deepEqual(shortcutCalls.map((call) => call.key).sort(), ["f2", "f3", "f4"]);
 	}
 

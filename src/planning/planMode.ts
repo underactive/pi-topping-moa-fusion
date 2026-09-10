@@ -1,5 +1,6 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { Message, TextContent } from "@earendil-works/pi-ai";
+import { Key } from "@earendil-works/pi-tui";
 import type {
 	AgentSettledEvent,
 	ExtensionAPI,
@@ -29,6 +30,7 @@ import { cleanupTrackedProcesses } from "../runtime/processPool.ts";
 import type { UsageStats } from "../runtime/results.ts";
 import { READ_ONLY_SUBAGENT_ENV } from "../runtime/runner.ts";
 import type { ModelRef, ThinkingLevel } from "../shared/modelRefs.ts";
+import { matchesFunctionKeyPress } from "../shared/functionKeys.ts";
 import { showCancelOverlay } from "../ui/cancelOverlay.ts";
 import { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import { showObserveOverlay, type ObserveSession } from "../ui/observeOverlay.ts";
@@ -80,6 +82,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	let lastReentryState = false;
 	let activeCancelSession: CancelSession | undefined;
 	let activeObserveSession: ObserveSession | undefined;
+	let unsubscribeLivePreviewInput: (() => void) | undefined;
 	let activeRunMoaInfo: MfPlanInfo | undefined;
 	let implementationHandoff: ImplementationHandoff | undefined;
 	let implementationPending = false;
@@ -189,6 +192,18 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	const questionnaireBusy = (ctx: ExtensionContext): boolean => {
 		if (!askUserQuestionTracker.isActive()) return false;
 		ctx.ui.notify("Answer or dismiss the ask_user_question questionnaire first.", "warning");
+		return true;
+	};
+	const toggleLivePreviewWidget = (ctx: ExtensionContext): boolean => {
+		if (questionnaireBusy(ctx)) return false;
+		if (activeCancelSession?.overlayOpen || activeObserveSession?.overlayOpen) return false;
+		const widget = runningProgressWidget ?? activeProgressWidget;
+		if (!widget) {
+			ctx.ui.notify("No MoA live preview is showing.", "warning");
+			return false;
+		}
+		const visible = widget.togglePreview();
+		ctx.ui.notify(visible ? "Live preview shown." : "Live preview hidden.");
 		return true;
 	};
 	const openCancelOverlayIfActive = (ctx: ExtensionContext): boolean => {
@@ -343,11 +358,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		openCancelOverlayIfActive,
 		openObserveOverlayIfActive,
 		toggleLivePreview: (ctx: ExtensionContext): void => {
-			if (questionnaireBusy(ctx)) return;
-			const widget = runningProgressWidget ?? activeProgressWidget;
-			if (!widget) return;
-			const visible = widget.togglePreview();
-			ctx.ui.notify(visible ? "Live preview shown." : "Live preview hidden.");
+			toggleLivePreviewWidget(ctx);
 		},
 		isAskUserQuestionActive: () => askUserQuestionTracker.isActive(),
 		questionnaireBusy,
@@ -494,6 +505,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			return { message: { customType: PLAN_MODE_CONTEXT_TYPE, content: instructions, display: false } };
 		},
 		onSessionStart: async (_event: unknown, ctx: ExtensionContext) => {
+			unsubscribeLivePreviewInput?.();
+			unsubscribeLivePreviewInput = undefined;
 			installShippedAgents();
 			planModeEnabled = false;
 			toolsBeforePlanMode = undefined;
@@ -531,6 +544,15 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				deactivatePlanOnlyTools();
 			}
 			updateStatus(ctx);
+			if (ctx.mode === "tui" && typeof ctx.ui.onTerminalInput === "function") {
+				unsubscribeLivePreviewInput = ctx.ui.onTerminalInput((data) => {
+					if (process.env.MOA_PLAN_DEBUG_KEYS === "1") ctx.ui.notify(`MoA terminal input: ${JSON.stringify(data)}`, "info");
+					if (!matchesFunctionKeyPress(data, Key.f2)) return undefined;
+					if (questionnaireBusy(ctx)) return undefined;
+					if (activeCancelSession?.overlayOpen || activeObserveSession?.overlayOpen) return undefined;
+					return toggleLivePreviewWidget(ctx) ? { consume: true } : undefined;
+				});
+			}
 		},
 		onSessionShutdown: (_event: { reason: string }) => {
 			implementationPending = false;
@@ -541,6 +563,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			runningProgressWidget = undefined;
 			restoreReadOnlyProviderEnv();
 			cleanupTrackedProcesses();
+			unsubscribeLivePreviewInput?.();
+			unsubscribeLivePreviewInput = undefined;
 		},
 	};
 }
