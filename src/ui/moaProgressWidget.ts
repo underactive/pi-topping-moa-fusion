@@ -380,6 +380,7 @@ export class MoaProgressWidget implements MoaProgressView {
 
 	/** Update one proposer's bounded completed and streaming transcript snapshot. */
 	updateTranscript(index: number, messages: Message[], partial?: Message): void {
+		if (!this.showPreview) return;
 		const s = this.statuses[index];
 		if (!s) return;
 		s.transcript = { messages: messages.slice(-TRANSCRIPT_MESSAGE_LIMIT), partial };
@@ -485,6 +486,7 @@ export class MoaProgressWidget implements MoaProgressView {
 
 	/** Update a role row's bounded completed and streaming transcript snapshot. */
 	updateRoleTranscript(phase: MoaPhase, messages: Message[], partial?: Message): void {
+		if (!this.showPreview) return;
 		const s = this.roleRows.get(phase)?.status;
 		if (!s) return;
 		s.transcript = { messages: messages.slice(-TRANSCRIPT_MESSAGE_LIMIT), partial };
