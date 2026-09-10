@@ -89,7 +89,7 @@ type ContextWindowResolver = (ref: ModelRef) => number | undefined;
 const ACTIVITY_WINDOW = 8;
 
 const TABLE_TITLE = "MoA Fusion";
-const TABLE_FOOTER = "esc cancel · f2 preview · f3 observe";
+const TABLE_FOOTER = "esc cancel · f2 toggle preview · f3 observe";
 /** Shortest rule run allowed between the title and the plan name before the name is dropped. */
 const MIN_TITLE_NAME_GAP = 2;
 /**
@@ -856,8 +856,10 @@ export class MoaProgressTableComponent implements Component {
 			}
 		}
 
+		const totalCost = rows.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
+		const totals = `total ${formatCost(totalCost)} · ${formatElapsed(now - this.createdAt)}`;
 		lines.push(border("─".repeat(innerWidth)));
-		lines.push(row(th.fg("dim", TABLE_FOOTER)));
+		lines.push(row(`${th.fg("dim", TABLE_FOOTER)}${" ".repeat(Math.max(1, bodyWidth - visibleWidth(TABLE_FOOTER) - visibleWidth(totals)))}${th.fg("dim", totals)}`));
 		lines.push(border("═".repeat(innerWidth)));
 		return lines;
 	}

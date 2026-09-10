@@ -174,7 +174,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	assert.match(lines[0], /^══ MoA Fusion ═+ voice-transcribe-plan ══$/);
 	assert.match(lines[1], /MODEL.*CTX.*MONITOR.*ACTIVITY.*TURNS.*TOOLS.*COST.*TIME/);
 	assert.match(lines[2], /── Plan /, "the first phase group carries a heading");
-	assert.match(lines.at(-2), /esc cancel · f2 preview · f3 observe/);
+	assert.match(lines.at(-2), /esc cancel · f2 toggle preview · f3 observe/);
 	assert.match(lines.at(-1), /^═+$/);
 	assert.match(lines.at(-3), /^─+$/, "the footer separator stays single-line");
 
@@ -493,7 +493,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	assert.equal(tight.filter((l) => l.includes("↳")).length, 0, "sub-rows yield first when space is tight");
 	assert.ok(tight.some((l) => l.includes("anthropic/claude-opus-4")));
 	assert.ok(tight.some((l) => l.includes("openai/gpt-5")));
-	assert.ok(tight.some((l) => l.includes("esc cancel · f2 preview · f3 observe")), "footer must survive");
+	assert.ok(tight.some((l) => l.includes("esc cancel · f2 toggle preview · f3 observe")), "footer must survive");
 	widget.stopWidget();
 }
 
