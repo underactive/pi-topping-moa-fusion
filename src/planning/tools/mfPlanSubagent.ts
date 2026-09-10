@@ -1,5 +1,5 @@
 import { StringEnum } from "@earendil-works/pi-ai";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { isKeyRelease, Key, matchesKey } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -16,6 +16,17 @@ import { parseRef as parseModelRefLabel, type ThinkingLevel } from "../../shared
 import { activityLoopCount } from "../../ui/agentStatus.ts";
 import { showCancelOverlay } from "../../ui/cancelOverlay.ts";
 import { PLAN_SUBAGENT_NAMES } from "./shared.ts";
+
+const CANCEL_HINT_WIDGET_KEY = "mf-plan-cancel";
+
+/** Mount the F4 cancel hint above the editor while subagents are in flight; pass undefined to clear. */
+function setCancelHint(ctx: ExtensionContext, text: string | undefined): void {
+	ctx.ui.setWidget(
+		CANCEL_HINT_WIDGET_KEY,
+		text ? [ctx.ui.theme.fg("dim", text)] : undefined,
+		{ placement: "aboveEditor" },
+	);
+}
 
 export interface MfPlanSubagentHost {
 	isEnabled(): boolean;
@@ -162,7 +173,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 						return { consume: true };
 					})
 					: undefined;
-				ctx.ui.setStatus("mf-plan-cancel", "f4: cancel agents");
+				setCancelHint(ctx, "f4: cancel mf-plan agents");
 				try {
 					const taskList = tasks.map((t, i) => ({
 						agent: t.agent,
@@ -222,7 +233,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 					unsubscribeF4?.();
 					toolSession.closeOverlay?.();
 					host.setActiveCancelSession(prevSession);
-					ctx.ui.setStatus("mf-plan-cancel", undefined);
+					setCancelHint(ctx, undefined);
 					await warnIfMutated();
 				}
 			}
@@ -245,7 +256,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 						return { consume: true };
 					})
 					: undefined;
-				ctx.ui.setStatus("mf-plan-cancel", "f4: cancel agent");
+				setCancelHint(ctx, "f4: cancel mf-plan agent");
 				try {
 					const result = await runSingleAgent(
 						ctx.cwd,
@@ -284,7 +295,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 					unsubscribeF4?.();
 					toolSession.closeOverlay?.();
 					host.setActiveCancelSession(prevSession);
-					ctx.ui.setStatus("mf-plan-cancel", undefined);
+					setCancelHint(ctx, undefined);
 					await warnIfMutated();
 				}
 			}

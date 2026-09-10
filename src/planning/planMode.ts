@@ -150,7 +150,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		implementationHandoff,
 	});
 	const updateStatus = (ctx: ExtensionContext): void => {
-		ctx.ui.setStatus("mf-plan", planModeEnabled ? ctx.ui.theme.fg("warning", "📋 plan") : undefined);
+		ctx.ui.setStatus("mf-plan", planModeEnabled ? ctx.ui.theme.fg("warning", "MoA Fusion plan mode") : undefined);
 	};
 	const getPlanModeTools = (activeToolNames: string[]): string[] => {
 		const filtered = activeToolNames.filter((name) => PLAN_MODE_READ_ONLY_TOOLS.has(name));
