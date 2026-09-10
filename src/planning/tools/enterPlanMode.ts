@@ -81,7 +81,7 @@ export async function runInteractivePlanMode(
 				prompt = initialPrompt!.trim();
 				skipEditorOnce = false;
 				initialPrompt = undefined;
-			} else if (ctx.hasUI) prompt = await showPromptEditor(ctx, "Plan Mode — describe what you want to plan", prefill);
+			} else prompt = await showPromptEditor(ctx, "Plan Mode — describe what you want to plan", prefill);
 			if (!prompt || !prompt.trim()) {
 				host.abortPlanMode(ctx);
 				ctx.ui.notify("Plan mode cancelled.");
