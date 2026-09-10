@@ -1,6 +1,7 @@
 import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { getSelectListTheme } from "@earendil-works/pi-coding-agent";
 import { fuzzyFilter, Key, matchesKey, SelectList, truncateToWidth, visibleWidth, type SelectItem, type TUI } from "@earendil-works/pi-tui";
+import { SELECTOR_POINTER } from "./chrome.ts";
 import { renderMenuFooterContents } from "./menu.ts";
 import { MODEL_LIST_LAYOUT } from "./modelLabel.ts";
 import { getModelCatalogue } from "../config/modelCatalogue.ts";
@@ -19,6 +20,9 @@ import {
 } from "../shared/modelRefs.ts";
 
 const MAX_VISIBLE_ROWS = 10;
+
+/** SelectList hardcodes "→ "; the extension's pointer is a plain "> " everywhere. */
+const withPointer = (line: string): string => line.replace("→ ", SELECTOR_POINTER);
 
 function modelThinkingPaneWidths(bodyWidth: number): { left: number; right: number } {
 	const divider = 1;
@@ -229,8 +233,8 @@ export class TwoPaneModelThinking {
 		for (let index = 0; index < rows; index++) {
 			const modelLine = modelLines[index] ?? "";
 			const levelLine = levelLines[index] ?? "";
-			let leftCell = column(` ${modelLine}`, leftWidth);
-			let rightCell = column(` ${levelLine}`, rightWidth);
+			let leftCell = column(` ${withPointer(modelLine)}`, leftWidth);
+			let rightCell = column(` ${withPointer(levelLine)}`, rightWidth);
 			// SelectList renders "→ " only on the selected row; other rows use "  ".
 			if (this.activePane === "model" && modelLine.includes("→")) {
 				leftCell = this.theme.bg("selectedBg", leftCell);

@@ -33,7 +33,14 @@
 
 import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { Key, matchesKey, visibleWidth, type SelectItem, type Component, type TUI } from "@earendil-works/pi-tui";
-import { SQUARE_SINGLE_BOX, createFrame, ratioViewport, wrapWords } from "./chrome.ts";
+import {
+	SELECTOR_POINTER,
+	SQUARE_SINGLE_BOX,
+	UNSELECTED_POINTER,
+	createFrame,
+	ratioViewport,
+	wrapWords,
+} from "./chrome.ts";
 import { PLAN_OVERLAY_OPTIONS } from "./menu.ts";
 import { TwoPaneModelThinking } from "./twoPaneModelThinking.ts";
 import { smartTruncateModelLabel } from "./modelLabel.ts";
@@ -501,7 +508,7 @@ class MoaModelPickerComponent implements Component {
 				const item = MODE_ITEMS[i];
 				if (!item) continue;
 				const isCurrent = i === this.modeIndex;
-				const pointer = isCurrent ? th.fg("accent", "\u25B8 ") : "  ";
+				const pointer = isCurrent ? th.fg("accent", SELECTOR_POINTER) : UNSELECTED_POINTER;
 				const labelText = isCurrent
 					? th.bold(th.fg("accent", item.label))
 					: th.bold(item.label);
@@ -527,7 +534,7 @@ class MoaModelPickerComponent implements Component {
 			if (lines.length <= viewport) return lines;
 			const compactItems = MODE_ITEMS.map((item, index) => {
 				const isCurrent = index === this.modeIndex;
-				const pointer = isCurrent ? th.fg("accent", "\u25B8 ") : "  ";
+				const pointer = isCurrent ? th.fg("accent", SELECTOR_POINTER) : UNSELECTED_POINTER;
 				const label = isCurrent ? th.bold(th.fg("accent", item.label)) : th.bold(item.label);
 				return row(pointer + label);
 			});
@@ -547,12 +554,12 @@ class MoaModelPickerComponent implements Component {
 			// the not-yet-ready Start action reads as inactive even when selected.
 			const slotRow = (label: string, detailText: string, index: number, disabled = false) => {
 				const isActive = active(index);
-				const pointer = isActive ? th.fg("accent", "\u25B8 ") : "  ";
+				const pointer = isActive ? th.fg("accent", SELECTOR_POINTER) : UNSELECTED_POINTER;
 				const labelText = disabled
 					? (isActive ? th.bold(th.fg("muted", label)) : th.fg("dim", label))
 					: (isActive ? th.bold(th.fg("accent", label)) : th.bold(label));
 				const detailSuffix = detailText ? `  ${th.fg("muted", detailText)}` : "";
-				return frame.row(` ${pointer}${labelText}${detailSuffix}`);
+				return frame.row(` ${pointer}${labelText}${detailSuffix}`, isActive ? "selectedBg" : undefined);
 			};
 			const detail = (label: string, ref: ModelRef | undefined, thinking: ThinkingLevel | undefined) => {
 				if (!ref) return "(none)";
@@ -612,7 +619,7 @@ class MoaModelPickerComponent implements Component {
 		if (this.screen === ROSTER_SCREEN) {
 			const rosterRow = (label: string, summary: string, index: number, disabled: boolean) => {
 				const isActive = index === this.rosterIndex;
-				const pointer = isActive ? th.fg("accent", "\u25B8 ") : "  ";
+				const pointer = isActive ? th.fg("accent", SELECTOR_POINTER) : UNSELECTED_POINTER;
 				const labelText = disabled
 					? (isActive ? th.bold(th.fg("muted", label)) : th.fg("dim", label))
 					: (isActive ? th.bold(th.fg("accent", label)) : th.bold(label));
@@ -664,7 +671,7 @@ class MoaModelPickerComponent implements Component {
 		const { actionRow, hintRows } = this.twoPane.renderFooter(bodyWidth, hints);
 		this.twoPane.setMaxVisibleRows(Math.max(1, viewport - 8 - (hintRows.length - 1)));
 		const twoPaneLines = this.twoPane.render(bodyWidth);
-		const framedPane = twoPaneLines.map(frame.row);
+		const framedPane = twoPaneLines.map((line) => frame.row(line));
 		const lines: string[] = [
 			topBorder,
 			row(th.fg("accent", title)),
@@ -673,7 +680,7 @@ class MoaModelPickerComponent implements Component {
 			sepBorder,
 			frame.row(actionRow),
 			sepBorder,
-			...hintRows.map(frame.row),
+			...hintRows.map((line) => frame.row(line)),
 			botBorder,
 		];
 		if (lines.length <= viewport) return lines;
@@ -806,7 +813,7 @@ class ImplementingModelPickerComponent implements Component {
 		const { actionRow, hintRows } = this.twoPane.renderFooter(bodyWidth, HINT_BASE + " • esc keep current");
 		this.twoPane.setMaxVisibleRows(Math.max(1, viewport - 8 - (hintRows.length - 1)));
 		const twoPaneLines = this.twoPane.render(bodyWidth);
-		const framedPane = twoPaneLines.map(frame.row);
+		const framedPane = twoPaneLines.map((line) => frame.row(line));
 		const lines = [
 			frame.top(),
 			row(th.fg("accent", this.title)),
@@ -815,7 +822,7 @@ class ImplementingModelPickerComponent implements Component {
 			frame.separator(),
 			frame.row(actionRow),
 			frame.separator(),
-			...hintRows.map(frame.row),
+			...hintRows.map((line) => frame.row(line)),
 			frame.bottom(),
 		];
 		if (lines.length <= viewport) return lines;

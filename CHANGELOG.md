@@ -13,6 +13,7 @@
 - Updated plan, opinion, and debate request prompts to use the completion-enabled prompt editor.
 - Highlighted tool-call activity rows in the MoA Fusion table and the cancel overlay with pi's theme colours: a bold `toolTitle` tool name followed by an `accent` argument.
 - Completed npm package metadata (keywords, repository, bugs, homepage, engines, gallery image) for first publish.
+- Simplified the shared list-selector pointer glyph to `>` and highlighted the focused row in the MoA pre-flight overview with the theme's selected background.
 
 ### Fixed
 

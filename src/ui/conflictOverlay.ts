@@ -24,7 +24,13 @@ import {
 	type TUI,
 } from "@earendil-works/pi-tui";
 import { CHAT_VALUE, chatOption, type Conflict, type ConflictAnswer, type ConflictOption } from "../moa/conflicts.ts";
-import { ROUNDED_SINGLE_BOX, createFrame, safeRenderWidth } from "./chrome.ts";
+import {
+	ROUNDED_SINGLE_BOX,
+	SELECTOR_POINTER,
+	UNSELECTED_POINTER,
+	createFrame,
+	safeRenderWidth,
+} from "./chrome.ts";
 
 const OVERLAY_MARGIN = 1;
 
@@ -338,7 +344,7 @@ class ConflictReviewComponent implements Component {
 		for (let i = 0; i < conflict.options.length; i++) {
 			const opt = conflict.options[i];
 			const selected = !greyed && i === this.optionIndex;
-			const marker = selected ? "> " : "  ";
+			const marker = selected ? SELECTOR_POINTER : UNSELECTED_POINTER;
 			const label = `${marker}${i + 1}. ${opt.label}`;
 			const color = greyed ? "muted" : selected ? "accent" : "text";
 			for (const l of wrapTextWithAnsi(th.fg(color, label), bodyWidth)) lines.push(row(l));

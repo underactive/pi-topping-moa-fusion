@@ -26,6 +26,25 @@ assert.equal(rounded.separator(), `├${"─".repeat(18)}┤`);
 assert.equal(rounded.bottom(), `╰${"─".repeat(18)}╯`);
 assert.equal(visibleWidth(rounded.row("body")), 20);
 
+// frame.row with a background wraps only the padded inner cell — borders stay
+// outside the wrapper — and the no-background call path stays byte-identical
+// whether or not the theme supports bg().
+const bgTheme = { fg: (_color, text) => text, bg: (_color, text) => `<<${text}>>` };
+const bgFrame = createFrame(bgTheme, 20, {
+	glyphs: ROUNDED_SINGLE_BOX,
+	horizontalPadding: 1,
+	truncationMark: "…",
+	padToWidth: true,
+	minimumBodyWidth: 10,
+});
+const plainRow = bgFrame.row("body");
+assert.equal(plainRow, rounded.row("body"), "row without a background must remain byte-identical regardless of theme bg support");
+const highlightedRow = bgFrame.row("body", "selectedBg");
+const vertical = ROUNDED_SINGLE_BOX.vertical;
+assert.ok(highlightedRow.startsWith(vertical) && highlightedRow.endsWith(vertical), "borders must stay outside the background wrapper");
+const innerCell = plainRow.slice(vertical.length, plainRow.length - vertical.length);
+assert.equal(highlightedRow, `${vertical}<<${innerCell}>>${vertical}`, "background must wrap exactly the padded inner cell, not the borders");
+
 const square = createFrame(theme, 20, {
 	glyphs: SQUARE_SINGLE_BOX,
 	horizontalPadding: 0,

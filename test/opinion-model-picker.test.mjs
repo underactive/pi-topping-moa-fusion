@@ -18,7 +18,7 @@ const ENTER = "\r";
 const ESCAPE = "\u001b";
 const UP = "\u001b[A";
 const DOWN = "\u001b[B";
-const POINTER = "▸";
+const POINTER = ">";
 const WIDTH = 96;
 
 const tempRoot = mkdtempSync(path.join(tmpdir(), "opinion-picker-test-"));

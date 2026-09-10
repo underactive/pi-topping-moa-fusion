@@ -190,7 +190,7 @@ class ObserveOverlayComponent implements Component {
 			frame.top(),
 			frame.row(th.fg("accent", "Observe agents") + th.fg("dim", ` ${title}${tab}${modelName}`)),
 			frame.separator(),
-			...visible.map(frame.row),
+			...visible.map((line) => frame.row(line)),
 			frame.separator(),
 			frame.row(th.fg("dim", help)),
 			frame.bottom(),

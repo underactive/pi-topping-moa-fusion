@@ -2,7 +2,13 @@ import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { Key, matchesKey, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
 import { loadMoaConfig, type MoaConfig } from "../config/settings.ts";
 import { modelRefLabel, type ModelRef, type ThinkingLevel } from "../shared/modelRefs.ts";
-import { SQUARE_SINGLE_BOX, createFrame, ratioViewport } from "./chrome.ts";
+import {
+	SELECTOR_POINTER,
+	SQUARE_SINGLE_BOX,
+	UNSELECTED_POINTER,
+	createFrame,
+	ratioViewport,
+} from "./chrome.ts";
 import { getAvailableModelRefs } from "./moaModelPicker.ts";
 import { smartTruncateModelLabel } from "./modelLabel.ts";
 import { TwoPaneModelThinking } from "./twoPaneModelThinking.ts";
@@ -144,7 +150,7 @@ export class OpinionModelPickerComponent implements Component {
 			const ready = this.isReady();
 			const slotRow = (label: string, detail: string, index: number, disabled = false) => {
 				const active = index === this.overviewIndex;
-				const pointer = active ? th.fg("accent", "▸ ") : "  ";
+				const pointer = active ? th.fg("accent", SELECTOR_POINTER) : UNSELECTED_POINTER;
 				const labelText = disabled
 					? (active ? th.bold(th.fg("muted", label)) : th.fg("dim", label))
 					: (active ? th.bold(th.fg("accent", label)) : th.bold(label));
@@ -187,7 +193,7 @@ export class OpinionModelPickerComponent implements Component {
 		const slot = this.screen - 1;
 		const { actionRow, hintRows } = this.twoPane.renderFooter(bodyWidth, `${HINT_BASE} • esc back`);
 		this.twoPane.setMaxVisibleRows(Math.max(1, viewport - 8 - (hintRows.length - 1)));
-		const pane = this.twoPane.render(bodyWidth).map(frame.row);
+		const pane = this.twoPane.render(bodyWidth).map((line) => frame.row(line));
 		const lines = [
 			frame.top(),
 			row(th.fg("accent", `Opinion ${slot + 1} (${slot + 1}/${MAX_OPINION_MODELS})`)),
@@ -196,7 +202,7 @@ export class OpinionModelPickerComponent implements Component {
 			frame.separator(),
 			frame.row(actionRow),
 			frame.separator(),
-			...hintRows.map(frame.row),
+			...hintRows.map((line) => frame.row(line)),
 			frame.bottom(),
 		];
 		if (lines.length <= viewport) return lines;

@@ -9,7 +9,7 @@ import {
 	type TUI,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
-import { fitVisible, wrapWords } from "./chrome.ts";
+import { fitVisible, SELECTOR, wrapWords } from "./chrome.ts";
 
 /** A boolean setting that can be changed with Space. */
 export interface ToggleMenuItem {
@@ -82,8 +82,6 @@ export interface MenuResult<T> {
 const DEFAULT_HINTS = ["↑↓ item", "←→ value", "⏎ select", "esc cancel"];
 const MIN_WIDTH = 36;
 const MAX_WIDTH = 76;
-/** The one selection glyph used throughout menu components. */
-export const SELECTOR = "→";
 const UNSELECTED_SELECTOR = " ".repeat(SELECTOR.length);
 
 function isToggleItem(item: MenuItem): item is ToggleMenuItem {

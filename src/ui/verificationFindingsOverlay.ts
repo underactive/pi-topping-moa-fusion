@@ -122,7 +122,7 @@ class VerificationFindingsOverlay implements Component {
 			frame.top(),
 			frame.row(th.fg("accent", "Verification findings") + th.fg("dim", position)),
 			frame.separator(),
-			...visible.map(frame.row),
+			...visible.map((line) => frame.row(line)),
 			frame.separator(),
 			frame.row(th.fg("dim", help)),
 			frame.bottom(),

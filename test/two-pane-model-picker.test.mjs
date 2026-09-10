@@ -51,8 +51,8 @@ assert.match(picker, /modelThinkingPaneWidths\(bodyWidth\)/);
 // Every pane row reserves a one-column inset before truncating to pane width.
 assert.match(picker, /this\.modelList\.render\(Math\.max\(1, leftWidth - 1\)\)/);
 assert.match(picker, /this\.levelList\.render\(Math\.max\(1, rightWidth - 1\)\)/);
-assert.match(picker, /column\(` \$\{modelLine\}`, leftWidth\)/);
-assert.match(picker, /column\(` \$\{levelLine\}`, rightWidth\)/);
+assert.match(picker, /withPointer\(modelLine/);
+assert.match(picker, /withPointer\(levelLine/);
 assert.match(picker, /` filter: \$\{this\.filter\}`/);
 
 // Selected rows retain base-theme foreground styling; render applies the

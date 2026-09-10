@@ -22,7 +22,7 @@ const ENTER = "\r";
 const ESCAPE = "\u001b";
 const UP = "\u001b[A";
 const DOWN = "\u001b[B";
-const POINTER = "\u25B8";
+const POINTER = ">";
 
 // Overview row indices — Load Roster, then proposers, the three required
 // roles, and Start. The blank lines are visual separators only.
@@ -627,6 +627,69 @@ try {
 		}
 		done(undefined);
 	}), "medium");
+
+	// ---------------------------------------------------------------------
+	// Journey 8: focused-row background. Exactly the focused pre-flight row
+	// is wrapped with selectedBg, including when that row is disabled (Load
+	// Roster, with no rosters saved).
+	// ---------------------------------------------------------------------
+	{
+		const bgCalls = [];
+		const bgTheme = {
+			fg: (_color, text) => text,
+			bg: (color, text) => {
+				bgCalls.push({ color, text });
+				return color === "selectedBg" ? `<<${text}>>` : text;
+			},
+			bold: (text) => text,
+		};
+		const makeBgCtx = (drive) => ({
+			hasUI: true,
+			mode: "tui",
+			model: models[1],
+			modelRegistry: {
+				getAll: () => models,
+				getAvailable: () => models,
+				find: () => undefined,
+				getRegisteredProviderIds: () => [],
+			},
+			ui: {
+				notify: () => {},
+				custom: (factory) => {
+					let settle;
+					const closed = new Promise((resolve) => { settle = resolve; });
+					const component = factory(tui, bgTheme, {}, (value) => settle(value));
+					drive(component, (value) => settle(value));
+					return closed;
+				},
+			},
+		});
+
+		await showMoaModelPicker(makeBgCtx((component, done) => {
+			component.handleInput(ENTER); // MoA → overview
+
+			// Cursor starts on the disabled Load Roster row (no rosters saved);
+			// selectedBg must still wrap it, and only it.
+			let rendered = component.render(WIDTH);
+			let wrapped = rendered.filter((line) => line.includes("<<") && line.includes(">>"));
+			assert.equal(wrapped.length, 1, "exactly one row must carry the selectedBg wrapper");
+			assert.ok(wrapped[0].includes("Load Roster"), "the disabled focused Load Roster row must still get selectedBg");
+
+			// Moving focus onto an enabled row must move the wrapper with it.
+			component.handleInput(DOWN); // Proposer 1
+			rendered = component.render(WIDTH);
+			wrapped = rendered.filter((line) => line.includes("<<") && line.includes(">>"));
+			assert.equal(wrapped.length, 1, "exactly one row must carry the selectedBg wrapper after moving focus");
+			assert.ok(wrapped[0].includes("Proposer 1"), "selectedBg must follow the focus to the newly active row");
+
+			done(undefined);
+		}), "medium");
+
+		assert.ok(bgCalls.length > 0, "theme.bg must have been invoked for the focused rows");
+		assert.ok(bgCalls.every((call) => call.color === "selectedBg"), "bg() must only be invoked with selectedBg in the pre-flight overview");
+
+		console.log("MoA pre-flight selectedBg tests passed.");
+	}
 
 	console.log("MoA model picker confirmation tests passed.");
 } finally {

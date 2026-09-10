@@ -45,8 +45,17 @@ export interface Frame {
 	top(): string;
 	separator(): string;
 	bottom(): string;
-	row(content: string): string;
+	row(content: string, background?: Parameters<Theme["bg"]>[0]): string;
 }
+
+/**
+ * Shared selection glyph for list rows across menus and pickers.
+ * SELECTOR is 1 visible column; SELECTOR_POINTER appends a trailing space
+ * (2 columns) so it lines up with UNSELECTED_POINTER, which is 2 spaces.
+ */
+export const SELECTOR = ">";
+export const SELECTOR_POINTER = `${SELECTOR} `;
+export const UNSELECTED_POINTER = "  ";
 
 export function safeRenderWidth(
 	suppliedWidth: number,
@@ -68,7 +77,7 @@ export function fitVisible(
 }
 
 export function createFrame(
-	theme: Pick<Theme, "fg">,
+	theme: Pick<Theme, "fg" | "bg">,
 	frameWidth: number,
 	options: {
 		glyphs: BoxGlyphs;
@@ -94,7 +103,14 @@ export function createFrame(
 		top: () => border(options.glyphs.topLeft + options.glyphs.horizontal.repeat(ruleWidth) + options.glyphs.topRight),
 		separator: () => border(options.glyphs.leftJoin + options.glyphs.horizontal.repeat(ruleWidth) + options.glyphs.rightJoin),
 		bottom: () => border(options.glyphs.bottomLeft + options.glyphs.horizontal.repeat(ruleWidth) + options.glyphs.bottomRight),
-		row: (content: string) => border(options.glyphs.vertical) + sidePadding + fit(content) + sidePadding + border(options.glyphs.vertical),
+		row: (content: string, background?: Parameters<Theme["bg"]>[0]) => {
+			// Borders stay unhighlighted; only the padded inner cell picks up the background.
+			const inner = sidePadding + fit(content) + sidePadding;
+			// Array.map supplies a numeric index as the second callback argument;
+			// ignore non-theme values so existing frame.row callbacks stay safe.
+			const highlighted = typeof background === "string" ? theme.bg(background, inner) : inner;
+			return border(options.glyphs.vertical) + highlighted + border(options.glyphs.vertical);
+		},
 	};
 }
 

@@ -17,7 +17,13 @@ import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { Key, matchesKey, type Component, type TUI } from "@earendil-works/pi-tui";
 import type { CancelSession } from "../runtime/cancelRun.ts";
 import { LOOP_THRESHOLD, usageBar } from "./agentStatus.ts";
-import { BRAILLE_SPINNER_FRAMES, ROUNDED_SINGLE_BOX, UI_TICK_MS, createFrame } from "./chrome.ts";
+import {
+	BRAILLE_SPINNER_FRAMES,
+	ROUNDED_SINGLE_BOX,
+	SELECTOR,
+	UI_TICK_MS,
+	createFrame,
+} from "./chrome.ts";
 import { highlightActivity } from "./toolActivity.ts";
 
 const OVERLAY_MARGIN = 1;
@@ -137,7 +143,7 @@ class CancelOverlayComponent implements Component {
 		for (let i = 0; i < agents.length; i++) {
 			const agent = agents[i];
 			const selected = i === this.sel;
-			const marker = selected ? th.fg("accent", "▸") : " ";
+			const marker = selected ? th.fg("accent", SELECTOR) : " ";
 			const icon =
 				agent.state === "done" ? th.fg("success", "✓")
 				: agent.state === "error" || agent.state === "cancelled" ? th.fg("error", "✗")
@@ -165,7 +171,7 @@ class CancelOverlayComponent implements Component {
 
 		lines.push(sep);
 		const allSelected = this.sel === agents.length;
-		const allMarker = allSelected ? th.fg("accent", "▸") : " ";
+		const allMarker = allSelected ? th.fg("accent", SELECTOR) : " ";
 		const allLabel = allSelected
 			? th.fg("error", "Cancel ALL running agents")
 			: "Cancel ALL running agents";

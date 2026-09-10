@@ -20,7 +20,7 @@ const UP = "\u001b[A";
 const DOWN = "\u001b[B";
 const LEFT = "\u001b[D";
 const RIGHT = "\u001b[C";
-const POINTER = "▸";
+const POINTER = ">";
 const WIDTH = 96;
 
 const tempRoot = mkdtempSync(path.join(tmpdir(), "debate-picker-test-"));
