@@ -41,19 +41,19 @@ Run `/mf-plan`, describe what you want planned, and pick **Mixture of Agents** w
 
 **MoA Fusion Pre-flight** — assign proposer, synthesizer, implementer, and verifier slots, or load a saved roster before starting fan-out.
 
-![MoA Fusion Pre-flight](docs/images/demo1.png)
+![MoA Fusion Pre-flight](https://raw.githubusercontent.com/underactive/pi-topping-moa-fusion/main/docs/images/demo1.png)
 
 **MoA Fusion table** — watch proposers explore and plan in parallel while synthesis, implementation, and verification remain queued.
 
-![MoA Fusion table](docs/images/demo2.png)
+![MoA Fusion table](https://raw.githubusercontent.com/underactive/pi-topping-moa-fusion/main/docs/images/demo2.png)
 
 **Synthesized plan review** — inspect the reconciled plan's evaluation dimensions, proposer alignment, and synthesis decisions before approval.
 
-![Synthesized plan review — evaluation and alignment](docs/images/demo3a.png)
+![Synthesized plan review — evaluation and alignment](https://raw.githubusercontent.com/underactive/pi-topping-moa-fusion/main/docs/images/demo3a.png)
 
 **Synthesized plan detail** — review the concrete implementation steps produced from the merged proposals.
 
-![Synthesized plan review — synthesis decisions and plan](docs/images/demo3b.png)
+![Synthesized plan review — synthesis decisions and plan](https://raw.githubusercontent.com/underactive/pi-topping-moa-fusion/main/docs/images/demo3b.png)
 
 ## Mixture of Agents (MoA)
 
