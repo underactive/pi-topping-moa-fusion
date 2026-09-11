@@ -1,25 +1,5 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.0]
 
-### Added
-
-- Added the `/mf-debate` read-only multi-round debate command.
-- Added prompt-editor file-path and repository-search completion with regression coverage.
-- Added an `F2` shortcut to toggle the inline/live preview of streamed agent output in the MoA Fusion table.
-- Added a state dot to the MoA Fusion footer status — green while agents work, yellow while waiting for user input, red after an unrecoverable failure.
-
-### Changed
-
-- Updated plan, opinion, and debate request prompts to use the completion-enabled prompt editor.
-- Highlighted tool-call activity rows in the MoA Fusion table and the cancel overlay with pi's theme colours: a bold `toolTitle` tool name followed by an `accent` argument.
-- Completed npm package metadata (keywords, repository, bugs, homepage, engines, gallery image) for first publish.
-- Simplified the shared list-selector pointer glyph to `>` and highlighted the focused row in the MoA pre-flight overview with the theme's selected background.
-
-### Fixed
-
-- Fixed summarized plan names falling back to random slugs when the naming model returned no visible text.
-- Fixed `/reload` failing when the extension tried to change active tools during extension loading.
-- Fixed plan-only tools leaking into normal sessions, including implementation kickoff turns from `/mf-plan-implement` while plan mode was still enabled.
-- Fixed raw press-only F2 handling, including Kitty-encoded F-keys and release events; non-silent feedback now appears when no preview is available, and `/mf-preview` provides a fallback when F2 interception is unreliable.
-- Fixed two-pane model picker selection highlight to span the full pane width and appear only on the active pane.
+- Initial commit

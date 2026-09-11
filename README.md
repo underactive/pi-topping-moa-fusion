@@ -7,6 +7,7 @@ A Pi extension built around **Mixture of Agents (MoA)** planning: several models
 ## Contents
 
 - [Quick Start](#quick-start)
+- [Screenshots](#screenshots)
 - [Mixture of Agents (MoA)](#mixture-of-agents-moa)
   - [Why prose, not code](#why-prose-not-code)
   - [How a run works](#how-a-run-works)
@@ -35,6 +36,24 @@ pi install npm:@underactive/pi-topping-moa-fusion
 ```
 
 Run `/mf-plan`, describe what you want planned, and pick **Mixture of Agents** when the model picker opens. Assign your models in the **MoA Fusion Pre-flight** overview, then choose **Start fan-out**. In the prompt editor, Tab completes file paths and `@name` fuzzy-searches the repo when `fd` is available (pi's bundled copy, or `fd`/`fdfind` on your PATH); completions insert references, not file contents.
+
+## Screenshots
+
+**MoA Fusion Pre-flight** — assign proposer, synthesizer, implementer, and verifier slots, or load a saved roster before starting fan-out.
+
+![MoA Fusion Pre-flight](docs/images/demo1.png)
+
+**MoA Fusion table** — watch proposers explore and plan in parallel while synthesis, implementation, and verification remain queued.
+
+![MoA Fusion table](docs/images/demo2.png)
+
+**Synthesized plan review** — inspect the reconciled plan's evaluation dimensions, proposer alignment, and synthesis decisions before approval.
+
+![Synthesized plan review — evaluation and alignment](docs/images/demo3a.png)
+
+**Synthesized plan detail** — review the concrete implementation steps produced from the merged proposals.
+
+![Synthesized plan review — synthesis decisions and plan](docs/images/demo3b.png)
 
 ## Mixture of Agents (MoA)
 
