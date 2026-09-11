@@ -59,9 +59,9 @@ if (liveTotal && liveTotal > currentResult.usage.contextTokens) {
 `partial` was `event.message`, which no longer exists on `message_update`.
 
 `currentResult.usage.contextTokens` receives its authoritative value in the
-`message_end` handler at `src/runtime/runner.ts:235-260`, from
+`message_end` handler at `src/runtime/runner.ts:273-281`, from
 `usage.totalTokens`. Provider extensions can also supply interim readings via
-the stderr usage-beacon path at `src/runtime/runner.ts:283-295`; providers that
+the stderr usage-beacon path at `src/runtime/runner.ts:307-318`; providers that
 emit neither still have no mid-turn context reading.
 
 ## Why this only hurts *some* providers
@@ -73,7 +73,7 @@ fine. **This regression is invisible for them.**
 The affected shape is a provider that runs the whole task as a single turn.
 The known example is `cursor-bridge`; `claude-bridge` is likely the same
 shape. Both are recognised by this repo as agentic provider bridges — see
-`READ_ONLY_SUBAGENT_ENV` at `src/runtime/runner.ts:41`:
+`READ_ONLY_SUBAGENT_ENV` at `src/runtime/runner.ts:43`:
 
 ```ts
 export const READ_ONLY_SUBAGENT_ENV = Object.freeze({
@@ -84,7 +84,7 @@ export const READ_ONLY_SUBAGENT_ENV = Object.freeze({
 
 For those, there is one `message_end` at the very end of the run. Until it
 arrives (or an interim usage beacon is emitted), `contextPercent()`
-(`src/ui/agentStatus.ts:59`) is called with `contextTokens = 0` and renders
+(`src/ui/agentStatus.ts:67`) is called with `contextTokens = 0` and renders
 `0.0%/<window>`, and `usageBar()` (`src/ui/agentStatus.ts:30`) renders a
 fully-empty bar.
 
@@ -166,7 +166,7 @@ this was collateral damage rather than an intentional capability removal.
   JSON *and* RPC stdout protocols. No gain.
 - **Estimate context from the output-token activity meter.** The meter counts
   *generated* words (`OutputActivityTracker`,
-  `src/runtime/activityTracking.ts:60`). Context size is dominated by *input* —
+  `src/runtime/activityTracking.ts:53`). Context size is dominated by *input* —
   prompt, tool results, file reads — so this would be wrong by an order of
   magnitude and worse than showing nothing.
 
@@ -194,7 +194,7 @@ with the upstream fix.
 
 ## Related context in this repo
 
-- `src/runtime/runner.ts:217` — `processLine`, the wire-event parser. It
+- `src/runtime/runner.ts:234` — `processLine`, the wire-event parser. It
   consumes the typed result of `parseSessionEvent`, so a future protocol change
   of this kind becomes a compile error instead of a silently skipped branch.
   **Keep it typed.**

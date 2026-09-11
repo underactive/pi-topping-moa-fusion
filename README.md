@@ -11,11 +11,14 @@ A Pi extension built around **Mixture of Agents (MoA)** planning: several models
   - [Why prose, not code](#why-prose-not-code)
   - [How a run works](#how-a-run-works)
   - [How the synthesizer works](#how-the-synthesizer-works)
-  - [The fan-out overlay](#the-fan-out-overlay)
+  - [Implementation failures](#implementation-failures)
+  - [The MoA Fusion table](#the-moa-fusion-table)
   - [Opinions (`/mf-opinion`)](#opinions-mf-opinion)
+  - [Debates (`/mf-debate`)](#debates-mf-debate)
 - [Commands](#commands)
   - [Cancelling running subagents](#cancelling-running-subagents)
 - [Plan Mode](#plan-mode)
+  - [ask_user_question coordination](#ask_user_question-coordination)
 - [Custom Tools](#custom-tools-available-in-plan-mode)
 - [Subagents](#subagents)
   - [Choosing their models](#choosing-their-models)
@@ -292,7 +295,8 @@ src/
 ├── index.ts                 # Thin composition entry
 ├── activityMeter.ts         # Dependency-free output-rate meter
 ├── shared/
-│   └── modelRefs.ts         # Model refs, thinking levels, display labels
+│   ├── modelRefs.ts         # Model refs, thinking levels, display labels
+│   └── functionKeys.ts      # F-key press matching (incl. Kitty encoding)
 ├── config/
 │   ├── settings.ts          # Persistent MoA settings
 │   ├── rosters.ts           # Agent-roster types, limits, and validation
@@ -338,6 +342,7 @@ src/
 ├── moa/
 │   ├── orchestration.ts     # Outer phase sequencer and run cleanup
 │   ├── fanout.ts            # Proposer fan-out and planless retry
+│   ├── fanoutWiring.ts      # Widget-backed parallel fan-out wiring
 │   ├── synthesis.ts         # Synthesis rounds, recovery, verdicts/conflicts
 │   ├── reviewLoop.ts        # Review/edit/chat/approve flow
 │   ├── verification.ts      # Post-implementation verify + bounded repair phase
@@ -357,6 +362,7 @@ src/
     ├── menu.ts
     ├── agentStatus.ts
     ├── twoPaneModelThinking.ts
+    ├── modelLabel.ts
     ├── moaModelPicker.ts
     ├── rosterEditor.ts       # Staged agent-roster manager for /mf-plan-settings
     ├── opinionModelPicker.ts
@@ -367,7 +373,11 @@ src/
     ├── planReviewOverlay.ts
     ├── conflictOverlay.ts
     ├── observeOverlay.ts
-    └── cancelOverlay.ts
+    ├── cancelOverlay.ts
+    ├── promptEditor.ts         # File-path/@name completion editor
+    ├── shimmer.ts
+    ├── toolActivity.ts
+    └── verificationFindingsOverlay.ts
 
 agents/                      # Shipped agent definitions
 ├── moa-explore.md
