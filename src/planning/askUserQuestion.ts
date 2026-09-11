@@ -52,13 +52,15 @@ export interface AskUserQuestionTracker {
  * Owned by the plan-mode controller (module-singleton discipline is avoided so
  * the fake-`pi` tests stay self-contained and no state leaks across sessions).
  */
-export function createAskUserQuestionTracker(pi: ExtensionAPI): AskUserQuestionTracker {
+export function createAskUserQuestionTracker(pi: ExtensionAPI, onChange?: () => void): AskUserQuestionTracker {
 	let active = false;
 	let unsubscribe: (() => void) | undefined;
 
 	const handleBlocked = (data: unknown): void => {
 		const payload = data as { active?: unknown } | null;
-		if (typeof payload?.active === "boolean") active = payload.active;
+		if (typeof payload?.active !== "boolean" || payload.active === active) return;
+		active = payload.active;
+		onChange?.();
 	};
 
 	const ensureSubscribed = (): void => {
@@ -71,7 +73,11 @@ export function createAskUserQuestionTracker(pi: ExtensionAPI): AskUserQuestionT
 
 	return {
 		isActive: () => active,
-		reset: () => { active = false; },
+		reset: () => {
+			if (!active) return;
+			active = false;
+			onChange?.();
+		},
 		ensureSubscribed,
 	};
 }

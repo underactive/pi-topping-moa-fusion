@@ -352,6 +352,7 @@ None.
 		const host = {
 			setImplementationHandoff: (h) => events.handoffs.push(h),
 			markImplementationPending: () => { events.pending++; },
+			noteRunError: () => {},
 			pi: { sendUserMessage: async (text) => { events.sent.push(text); } },
 		};
 		const deps = {
@@ -572,6 +573,7 @@ try {
 			setActiveCancelSession: () => {},
 			stopActiveProgressWidget: () => {},
 			markImplementationPending: () => {},
+			noteRunError: () => {},
 			pi: { sendUserMessage: async () => {} },
 		};
 		const ctx = {

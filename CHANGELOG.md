@@ -7,6 +7,7 @@
 - Added the `/mf-debate` read-only multi-round debate command.
 - Added prompt-editor file-path and repository-search completion with regression coverage.
 - Added an `F2` shortcut to toggle the inline/live preview of streamed agent output in the MoA Fusion table.
+- Added a state dot to the MoA Fusion footer status — green while agents work, yellow while waiting for user input, red after an unrecoverable failure.
 
 ### Changed
 

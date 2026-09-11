@@ -272,6 +272,7 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 
 	pi.on("context", controller.onContext);
 	pi.on("before_agent_start", controller.onBeforeAgentStart);
+	pi.on("agent_start", controller.onAgentStart);
 	pi.on("message_start", controller.onMessageStart);
 	pi.on("message_update", controller.onMessageUpdate);
 	pi.on("tool_execution_start", controller.onToolExecutionStart);

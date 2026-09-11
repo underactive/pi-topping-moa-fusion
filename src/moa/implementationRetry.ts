@@ -202,11 +202,13 @@ export async function runImplementationRetryFlow(
 ): Promise<void> {
 	const plan = resolveHandoffPlan(handoff, ctx.cwd);
 	if (!plan) {
+		host.noteRunError(ctx, "Implementation failed and the approved plan content could not be retrieved.");
 		ctx.ui.notify("Implementation failed and approved plan content could not be retrieved from disk.", "error");
 		return;
 	}
 
 	if (!ctx.hasUI) {
+		host.noteRunError(ctx, "Implementation failed with no interactive retry available.");
 		const reasonStr = failureReason ? `: ${failureReason}` : "";
 		ctx.ui.notify(`Implementation failed${reasonStr}. Run /mf-plan-implement to retry with the same or a different model.`, "error");
 		return;

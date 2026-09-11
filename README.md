@@ -175,6 +175,8 @@ Both modes share the same plan-mode container. While it is active:
 3. **Per-session plan file** — one slug per session, persisted across `/resume`.
 4. **User approval** — `exit_plan_mode` prompts to approve or keep planning. Approving restores full tool access and hands the plan back to the model.
 
+- A `● MoA Fusion (plan mode)` indicator sits in the footer while planning, and stays as `● MoA Fusion` through implementation and verification. Green: agents are working. Yellow: waiting for you (a prompt, an overlay, a questionnaire, or an idle plan-mode session). Red: a flow stopped with nothing left to try; it clears on your next turn or when you leave plan mode.
+
 ### ask_user_question coordination
 
 When an extension such as `rpiv-ask-user-question` registers the `ask_user_question` tool, MoA Fusion defers all in-plan clarification to it rather than drawing its own dialog. The plan-mode tools (`enter_plan_mode`, `exit_plan_mode`, `mf_plan_subagent`) run sequentially, so a same-message `ask_user_question` + `exit_plan_mode` resolves the questionnaire first — MoA Fusion's review overlay never opens on top of it. `exit_plan_mode` refuses with a pending-question error while a questionnaire is still waiting for answers. The slash commands, F3, and F4 warn instead of opening; **Esc** and **F4** during a `mf_plan_subagent` run pass through to the questionnaire. MoA orchestration prompts (synthesizer open questions, conflict review, review-loop plan review/chat editor, verification) are deliberately unaffected because they run while the session model is idle. Without the tool registered, the model asks for clarification in plain text and the injected instructions never name `ask_user_question`.

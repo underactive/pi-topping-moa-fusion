@@ -141,6 +141,7 @@ try {
 		applyImplementingSelection: async (_ctx, selection) => { appliedSelections.push(selection); },
 		setImplementationHandoff: (h) => { currentHandoff = h; },
 		markImplementationPending: () => { pendingMarked = true; },
+		noteRunError: () => {},
 		getActiveRunMoaInfo: () => undefined,
 		getActiveProgressWidget: () => fakeWidget,
 		stopActiveProgressWidget: () => { widgetStopped++; },

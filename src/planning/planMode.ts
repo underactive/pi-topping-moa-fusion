@@ -3,11 +3,13 @@ import type { Message, TextContent } from "@earendil-works/pi-ai";
 import { Key } from "@earendil-works/pi-tui";
 import type {
 	AgentSettledEvent,
+	AgentStartEvent,
 	ExtensionAPI,
 	ExtensionContext,
 	MessageEndEvent,
 	MessageStartEvent,
 	MessageUpdateEvent,
+	ThemeColor,
 	ToolExecutionStartEvent,
 } from "@earendil-works/pi-coding-agent";
 
@@ -32,6 +34,7 @@ import { READ_ONLY_SUBAGENT_ENV } from "../runtime/runner.ts";
 import type { ModelRef, ThinkingLevel } from "../shared/modelRefs.ts";
 import { matchesFunctionKeyPress } from "../shared/functionKeys.ts";
 import { showCancelOverlay } from "../ui/cancelOverlay.ts";
+import { UI_TICK_MS } from "../ui/chrome.ts";
 import { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import { showObserveOverlay, type ObserveSession } from "../ui/observeOverlay.ts";
 import { ASK_USER_QUESTION_TOOL_NAME, createAskUserQuestionTracker, isAskUserQuestionInstalled } from "./askUserQuestion.ts";
@@ -43,6 +46,15 @@ import { PLAN_EXIT_CONTEXT_TYPE, PLAN_MODE_CONTEXT_TYPE, PLAN_MODE_CUSTOM_TOOLS,
 /** Trailing chars of the implementer report kept for the verifier's evidence. */
 const IMPLEMENTATION_REPORT_MAX_CHARS = 8000;
 const IMPLEMENTATION_TRANSCRIPT_MESSAGE_LIMIT = 40;
+
+type MoaFooterState = "working" | "waiting" | "error";
+const FOOTER_STATUS_KEY = "mf-plan";
+const FOOTER_DOT = "●";
+const FOOTER_DOT_COLOR: Record<MoaFooterState, ThemeColor> = {
+	working: "success",
+	waiting: "warning",
+	error: "error",
+};
 
 /** Clamp unknown usage fields to non-negative numbers, mirroring the wire-runner accounting. */
 function nonnegative(value: unknown): number {
@@ -94,6 +106,12 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	// The one MoA progress table, adopted from orchestration on approval and kept
 	// alive across in-session implementation and verification.
 	let activeProgressWidget: MoaProgressWidget | undefined;
+	// Latched unrecoverable error: red until the user starts new work. Only set
+	// by flows that stop with nothing left to try (see noteRunError call sites).
+	let footerError: string | undefined;
+	let lastFooterCtx: ExtensionContext | undefined;
+	let lastRenderedFooter: string | undefined;
+	let footerTimer: ReturnType<typeof setInterval> | undefined;
 	// Orchestration publishes its widget here before approval, while fan-out,
 	// synthesis and review still own the table.
 	let runningProgressWidget: MoaProgressWidget | undefined;
@@ -111,7 +129,9 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	// that tool) is currently blocking the user. Owned by this controller rather
 	// than a module singleton so the fake-`pi` tests stay self-contained and no
 	// state leaks across sessions.
-	const askUserQuestionTracker = createAskUserQuestionTracker(pi);
+	const askUserQuestionTracker = createAskUserQuestionTracker(pi, () => {
+		if (lastFooterCtx) updateStatus(lastFooterCtx);
+	});
 	// Subscribe immediately so the blocked flag is live from extension load, not
 	// only after the first session_start (which the test harnesses never fire).
 	// onSessionStart still resets + re-subscribes for the reload/stuck-flag case.
@@ -149,8 +169,49 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		moaInfo: activeRunMoaInfo,
 		implementationHandoff,
 	});
+	const footerState = (ctx: ExtensionContext): MoaFooterState => {
+		if (footerError) return "error";
+		// The one state inference cannot see: the questionnaire blocks the user
+		// from inside an active agent run, so isIdle() is false while waiting.
+		if (askUserQuestionTracker.isActive()) return "waiting";
+		if (!ctx.isIdle() || implementationPending || activeCancelSession?.run) return "working";
+		return "waiting";
+	};
+	const renderFooter = (ctx: ExtensionContext): string | undefined => {
+		const runActive = implementationPending || activeProgressWidget !== undefined || activeCancelSession?.run !== undefined;
+		if (!planModeEnabled && !runActive && !footerError) return undefined;
+		const dot = ctx.ui.theme.fg(FOOTER_DOT_COLOR[footerState(ctx)], FOOTER_DOT);
+		const label = planModeEnabled ? "MoA Fusion (plan mode)" : "MoA Fusion";
+		return `${dot} ${ctx.ui.theme.fg("dim", label)}`;
+	};
 	const updateStatus = (ctx: ExtensionContext): void => {
-		ctx.ui.setStatus("mf-plan", planModeEnabled ? ctx.ui.theme.fg("warning", "MoA Fusion plan mode") : undefined);
+		try {
+			const rendered = renderFooter(ctx);
+			if (rendered === lastRenderedFooter) return;
+			lastRenderedFooter = rendered;
+			ctx.ui.setStatus(FOOTER_STATUS_KEY, rendered);
+			lastFooterCtx = ctx;
+		} catch {
+			// pi's ctx getters throw once the ctx is stale (post-/reload). Stop
+			// touching it until the next live event supplies a fresh context.
+			lastFooterCtx = undefined;
+		}
+	};
+	const stopFooterTicker = (): void => {
+		if (footerTimer) clearInterval(footerTimer);
+		footerTimer = undefined;
+	};
+	const startFooterTicker = (ctx: ExtensionContext): void => {
+		stopFooterTicker();
+		lastFooterCtx = ctx;
+		if (ctx.mode !== "tui") return;
+		// Subprocess phases fire no pi events, so repaint on the shared UI pulse.
+		// The dirty-check avoids repeated status writes while state is unchanged.
+		footerTimer = setInterval(() => {
+			const tickCtx = lastFooterCtx;
+			if (tickCtx) updateStatus(tickCtx);
+		}, UI_TICK_MS);
+		footerTimer.unref();
 	};
 	const getPlanModeTools = (activeToolNames: string[]): string[] => {
 		const filtered = activeToolNames.filter((name) => PLAN_MODE_READ_ONLY_TOOLS.has(name));
@@ -228,12 +289,14 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	};
 	const abortPlanMode = (ctx: ExtensionContext): void => {
 		planModeEnabled = false;
+		footerError = undefined;
 		restoreNormalModeTools();
 		updateStatus(ctx);
 		persistState();
 	};
 	const exitPlanMode = (ctx: ExtensionContext): void => {
 		planModeEnabled = false;
+		footerError = undefined;
 		needsExitReminder = true;
 		restoreNormalModeTools();
 		ctx.ui.notify("Plan mode disabled. Full access restored.");
@@ -242,6 +305,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	};
 	const activatePlanMode = (ctx: ExtensionContext, clearRunInfo: boolean): void => {
 		planModeEnabled = true;
+		footerError = undefined;
 		needsExitReminder = false;
 		planSlug = getPlanSlug();
 		lastReentryState = getPlan() !== null;
@@ -280,6 +344,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		lastReentryState = false;
 		activeRunMoaInfo = undefined;
 		resetImplementationState();
+		footerError = undefined;
+		updateStatus(ctx);
 		persistState();
 		ctx.ui.notify("Plan state cleared — the next /mf-plan starts a fresh planning round.");
 	};
@@ -315,6 +381,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			persistState();
 		},
 		markImplementationPending: (ctx) => {
+			footerError = undefined;
 			implementationPending = true;
 			implementationOutputTracker = new OutputActivityTracker();
 			resetImplementationCounters();
@@ -333,6 +400,11 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				widget.switchToImplementing(implementationHandoff.model, "implementing plan…", implementationHandoff.thinking);
 				activeProgressWidget = widget;
 			}
+			if (ctx) updateStatus(ctx);
+		},
+		noteRunError: (ctx, message) => {
+			footerError = message;
+			updateStatus(ctx);
 		},
 		adoptProgressWidget: (widget) => {
 			if (activeProgressWidget && activeProgressWidget !== widget) activeProgressWidget.stopWidget();
@@ -380,6 +452,10 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		saveApprovedPlanToRepo,
 		moaRunHost,
 		applyImplementingSelection: moaRunHost.applyImplementingSelection,
+		onAgentStart: (_event: AgentStartEvent, ctx: ExtensionContext) => {
+			footerError = undefined;
+			updateStatus(ctx);
+		},
 		onMessageStart: (event: MessageStartEvent) => {
 			if (!implementationPending || !activeProgressWidget) return;
 			if (event.message.role === "assistant") {
@@ -444,6 +520,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			}
 		},
 		onAgentSettled: (_event: AgentSettledEvent, ctx: ExtensionContext) => {
+			updateStatus(ctx);
 			if (!implementationPending) return;
 			implementationPending = false;
 			const stopReason = lastImplementationStopReason;
@@ -472,6 +549,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			const reportFlowFailure = (flow: string) => (err: unknown) => {
 				const detail = err instanceof Error ? err.message : String(err);
 				try {
+					footerError = `${flow} could not run: ${detail}`;
+					updateStatus(ctx);
 					ctx.ui.notify(`${flow} could not run: ${detail}`, "error");
 				} catch {
 					// ctx is stale (replaced/reloaded); nothing left to notify against.
@@ -533,6 +612,9 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			activeCancelSession = undefined;
 			activeObserveSession = undefined;
 			implementationHandoff = undefined;
+			footerError = undefined;
+			lastRenderedFooter = undefined;
+			lastFooterCtx = undefined;
 			resetImplementationState();
 			// Clear any blocked flag left by a questionnaire that died without its
 			// finally (a fresh session must not inherit a stuck "answer first" gate),
@@ -558,6 +640,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				deactivatePlanOnlyTools();
 			}
 			updateStatus(ctx);
+			startFooterTicker(ctx);
 			if (ctx.mode === "tui" && typeof ctx.ui.onTerminalInput === "function") {
 				unsubscribeLivePreviewInput = ctx.ui.onTerminalInput((data) => {
 					if (process.env.MOA_PLAN_DEBUG_KEYS === "1") ctx.ui.notify(`MoA terminal input: ${JSON.stringify(data)}`, "info");
@@ -579,6 +662,10 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			cleanupTrackedProcesses();
 			unsubscribeLivePreviewInput?.();
 			unsubscribeLivePreviewInput = undefined;
+			stopFooterTicker();
+			footerError = undefined;
+			lastFooterCtx = undefined;
+			lastRenderedFooter = undefined;
 		},
 	};
 }

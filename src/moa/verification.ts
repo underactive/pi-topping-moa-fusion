@@ -472,6 +472,7 @@ export async function runImplementationVerification(
 
 	const plan = resolveHandoffPlan(handoff, ctx.cwd);
 	if (!plan) {
+		host.noteRunError(ctx, "Verification skipped — the approved plan content could not be retrieved from disk.");
 		ctx.ui.notify("Verification skipped — the approved plan content could not be retrieved from disk.", "error");
 		return;
 	}
@@ -626,6 +627,9 @@ export async function runImplementationVerification(
 	const recoverFromVerifierFailure = async (outcome: VerifierRunOutcome): Promise<"retry" | "fallback" | "stop"> => {
 		if (!ctx.hasUI) {
 			const reason = outcome.cancelled ? "cancelled" : `failed: ${outcome.output || "unknown error"}`;
+			if (!outcome.cancelled) {
+				host.noteRunError(ctx, `Verification failed: ${outcome.output || "unknown error"}`);
+			}
 			ctx.ui.notify(`Verification ${reason}. Implementation left as-is.`, "warning");
 			finish(outcome.cancelled ? "cancelled" : "error");
 			return "stop";
@@ -724,6 +728,7 @@ export async function runImplementationVerification(
 		const candidate = parseVerificationVerdict(outcome.output);
 		if (!candidate.verdict || (criteria.length > 0 && candidate.criteria.length === 0)) {
 			if (!ctx.hasUI) {
+				host.noteRunError(ctx, "Verifier produced no parseable verdict.");
 				ctx.ui.notify("Verifier produced no parseable verdict. Implementation left as-is.", "warning");
 				finish("error");
 				return;

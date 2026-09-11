@@ -31,6 +31,12 @@ export interface MoaRunHost {
 	setImplementationHandoff(handoff: ImplementationHandoff | undefined): void;
 	markImplementationPending(ctx?: ExtensionContext): void;
 	/**
+	 * Latch the footer's unrecoverable-error dot and repaint. Only for flows that
+	 * stop with nothing left to try automatically — not for warnings, fallbacks,
+	 * retry dialogs, or user cancellation.
+	 */
+	noteRunError(ctx: ExtensionContext, message: string): void;
+	/**
 	 * Take ownership of the MoA progress widget from orchestration, so it stays
 	 * mounted across in-session implementation and verification. Orchestration's
 	 * own `finally` skips its stop when the controller holds the widget.
