@@ -22,6 +22,8 @@ const ENTER = "\r";
 const TAB = "\t";
 const ESCAPE = "\u001b";
 const DOWN = "\u001b[B";
+const UP = "\u001b[A";
+const RIGHT = "\u001b[C";
 const SPACE = " ";
 
 const tempRoot = mkdtempSync(path.join(tmpdir(), "moa-setup-overlay-test-"));
@@ -46,7 +48,7 @@ try {
 	);
 
 	const { showMoaSetup } = await import("../src/ui/moaSetupOverlay.ts");
-	const { loadMoaConfig } = await import("../src/config/settings.ts");
+	const { loadMoaConfig, saveMoaConfig } = await import("../src/config/settings.ts");
 	const { initTheme } = await import("@earendil-works/pi-coding-agent");
 	const { visibleWidth } = await import("@earendil-works/pi-tui");
 
@@ -127,8 +129,19 @@ try {
 				component.handleInput(ENTER);
 				component.handleInput(ENTER);
 
-				// agent rosters row → hands off to the roster manager.
+				// max concurrent agents: cycle to 3 before the roster round trip.
 				component.handleInput(DOWN);
+				component.handleInput(DOWN);
+				component.handleInput(DOWN);
+				component.handleInput(DOWN);
+				component.handleInput(RIGHT);
+				component.handleInput(RIGHT);
+				assert.match(component.render(WIDTH).join("\n"), /‹3›/);
+
+				// agent rosters row → hands off to the roster manager.
+				component.handleInput(UP);
+				component.handleInput(UP);
+				component.handleInput(UP);
 				component.handleInput(ENTER);
 			},
 			// Overlay 2: the roster manager's staged list; Back with no edits.
@@ -146,6 +159,8 @@ try {
 				const reopened = component.render(WIDTH).join("\n");
 				renderedViews.push(reopened);
 				assert.match(reopened, /─ planning subagents ─/, "the settings overlay must reopen after the roster manager");
+				assert.match(reopened, /max concurrent agents/);
+				assert.match(reopened, /‹3›/, "staged max concurrent agents must survive the roster round trip");
 
 				component.handleInput(DOWN);
 				component.handleInput(DOWN);
@@ -174,6 +189,8 @@ try {
 	assert.match(overview, /─ rosters ─/);
 	assert.match(overview, /agent rosters\s+0 configured/);
 	assert.match(overview, /─ options ─/);
+	assert.match(overview, /max concurrent agents/);
+	assert.match(overview, /‹1›/);
 	assert.ok(
 		overview.indexOf("─ planning subagents ─") < overview.indexOf("─ model roles ─")
 			&& overview.indexOf("─ model roles ─") < overview.indexOf("─ rosters ─")
@@ -211,6 +228,7 @@ try {
 	assert.deepEqual(savedRoles.proposers, []);
 	assert.deepEqual(savedRoles.rosters, []);
 	assert.equal(savedRoles.autoResolveConflicts, true, "the toggle made before the roster round trip must persist");
+	assert.equal(savedRoles.maxConcurrentAgents, 3, "max concurrent agents staged before the roster round trip must persist");
 
 	const explore = readFileSync(path.join(agentsDir, "moa-explore.md"), "utf8");
 	assert.match(explore, /^model: anthropic\/claude-haiku-4-5$/m);
@@ -264,6 +282,28 @@ try {
 	} finally {
 		process.stdout.rows = previousRows;
 	}
+
+	// Cancel discards an unsaved max concurrent agents change.
+	saveMoaConfig({ ...loadMoaConfig(), maxConcurrentAgents: 3 });
+	const cancelConcurrencyCtx = {
+		...ctx,
+		ui: {
+			...ctx.ui,
+			custom: (factory) => {
+				const component = factory(tui, theme, {}, () => {});
+				component.handleInput(DOWN);
+				component.handleInput(DOWN);
+				component.handleInput(DOWN);
+				component.handleInput(DOWN);
+				component.handleInput(DOWN);
+				component.handleInput(RIGHT);
+				component.handleInput(ESCAPE);
+				return Promise.resolve(undefined);
+			},
+		},
+	};
+	assert.equal(await showMoaSetup(cancelConcurrencyCtx, "medium"), false);
+	assert.equal(loadMoaConfig().maxConcurrentAgents, 3);
 
 	// Non-interactive callers must decline rather than block.
 	assert.equal(await showMoaSetup({ ...ctx, mode: "json" }, "medium"), false);

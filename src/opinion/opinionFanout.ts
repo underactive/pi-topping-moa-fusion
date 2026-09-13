@@ -27,6 +27,7 @@ export interface OpinionFanoutOptions {
 	session: CancelSession;
 	widget: MoaProgressWidget;
 	agents: AgentConfig[];
+	maxConcurrency: number;
 }
 
 export type OpinionFanoutResult =
@@ -34,7 +35,7 @@ export type OpinionFanoutResult =
 	| { status: "cancelled" };
 
 export async function runOpinionFanout(options: OpinionFanoutOptions): Promise<OpinionFanoutResult> {
-	const { host, ctx, question, models, thinking, session, widget, agents } = options;
+	const { host, ctx, question, models, thinking, session, widget, agents, maxConcurrency } = options;
 	const originalTask = buildOpinionTask(question);
 	widget.startFanout(models, thinking);
 	const observe: ObserveSession = {
@@ -57,7 +58,7 @@ export async function runOpinionFanout(options: OpinionFanoutOptions): Promise<O
 			tasks: ModelParallelAgentTask[],
 			indexMap: (index: number) => number,
 			currentRun: CancelRun,
-		): Promise<SingleResult[]> => runWidgetFanout({ ctx, agents, tasks, run: currentRun, session, widget, observe, models, indexMap });
+		): Promise<SingleResult[]> => runWidgetFanout({ ctx, agents, tasks, run: currentRun, session, widget, observe, models, indexMap, maxConcurrency });
 
 		const run = new CancelRun();
 		session.title = "Opinion agents";

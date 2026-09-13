@@ -10,6 +10,7 @@ import * as path from "node:path";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import type { AgentConfig } from "../agents/discovery.ts";
+import { normalizeMaxConcurrentAgents } from "../config/settings.ts";
 import type { ThinkingLevel } from "../shared/modelRefs.ts";
 import { OutputActivityTracker, PartialAssistantAssembler, formatToolActivity } from "./activityTracking.ts";
 import { escalateKill, mapWithConcurrencyLimit, trackedProcesses } from "./processPool.ts";
@@ -24,7 +25,6 @@ import {
 } from "./wire.ts";
 
 const MAX_PARALLEL_TASKS = 8;
-const MAX_CONCURRENCY = 5;
 const CHILD_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const MAX_DIAGNOSTIC_CHARS = 65_536;
 const READ_ONLY_AGENT_TOOLS = ["read", "grep", "find", "ls"] as const;
@@ -413,6 +413,11 @@ export interface ModelParallelAgentTask extends ParallelAgentTask {
 	model: string;
 }
 
+export interface ParallelRunOptions {
+	/** Max child processes in flight. Normalized here, so an omitted or malformed value falls back to the safe default. */
+	maxConcurrency?: number;
+}
+
 /** Run multiple agents in parallel with concurrency limit. */
 export async function runParallelAgents(
 	defaultCwd: string,
@@ -422,10 +427,13 @@ export async function runParallelAgents(
 	onUpdate: ((partial: AgentToolResult<unknown>) => void) | undefined,
 	onEach?: (index: number, result: SingleResult) => void,
 	onProgress?: (index: number, result: SingleResult) => void,
+	options: ParallelRunOptions = {},
 ): Promise<SingleResult[]> {
 	if (tasks.length > MAX_PARALLEL_TASKS) {
 		throw new Error(`Too many parallel tasks (${tasks.length}). Max is ${MAX_PARALLEL_TASKS}.`);
 	}
+
+	const maxConcurrency = normalizeMaxConcurrentAgents(options.maxConcurrency);
 
 	const allResults: SingleResult[] = new Array(tasks.length);
 
@@ -452,10 +460,10 @@ export async function runParallelAgents(
 		}
 	};
 
-	const results = await mapWithConcurrencyLimit(tasks, MAX_CONCURRENCY, async (t, index) => {
+	const results = await mapWithConcurrencyLimit(tasks, maxConcurrency, async (t, index) => {
 		const taskSignal = t.signal ?? signal;
 		if (taskSignal?.aborted) {
-			// Cancelled while queued behind MAX_CONCURRENCY — never spawn.
+			// Cancelled while queued behind the configured concurrency limit — never spawn.
 			const placeholder = cancelledPlaceholderResult(t.agent, t.task);
 			allResults[index] = placeholder;
 			emitParallelUpdate();
@@ -500,15 +508,18 @@ export async function runParallelAgentsWithModels(
 	signal: AbortSignal | undefined,
 	onEach: ((index: number, result: SingleResult) => void) | undefined,
 	onProgress?: (index: number, result: SingleResult) => void,
+	options: ParallelRunOptions = {},
 ): Promise<SingleResult[]> {
 	if (tasks.length > MAX_PARALLEL_TASKS) {
 		throw new Error(`Too many parallel tasks (${tasks.length}). Max is ${MAX_PARALLEL_TASKS}.`);
 	}
 
-	const results = await mapWithConcurrencyLimit(tasks, MAX_CONCURRENCY, async (t, index) => {
+	const maxConcurrency = normalizeMaxConcurrentAgents(options.maxConcurrency);
+
+	const results = await mapWithConcurrencyLimit(tasks, maxConcurrency, async (t, index) => {
 		const taskSignal = t.signal ?? signal;
 		if (taskSignal?.aborted) {
-			// Cancelled while queued behind MAX_CONCURRENCY — never spawn.
+			// Cancelled while queued behind the configured concurrency limit — never spawn.
 			const placeholder = cancelledPlaceholderResult(t.agent, t.task);
 			onEach?.(index, placeholder);
 			return placeholder;

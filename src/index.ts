@@ -74,7 +74,7 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 		handler: async (_args, ctx) => { if (controller.questionnaireBusy(ctx)) return; await controller.clearCompletedPlan(ctx); },
 	});
 	pi.registerCommand("mf-plan-settings", {
-		description: "Configure the explore and cheap/fast agents, agent rosters for MoA roles, and plan options",
+		description: "Configure the explore and cheap/fast agents, agent rosters for MoA roles, plan options, and max concurrent agents",
 		handler: async (_args, ctx) => {
 			if (controller.questionnaireBusy(ctx)) return;
 			installShippedAgents();

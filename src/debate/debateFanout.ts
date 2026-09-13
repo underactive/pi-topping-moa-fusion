@@ -34,6 +34,7 @@ export interface DebateFanoutOptions {
 	session: CancelSession;
 	widget: MoaProgressWidget;
 	agents: AgentConfig[];
+	maxConcurrency: number;
 }
 
 export type DebateFanoutResult =
@@ -53,7 +54,7 @@ interface CumulativeUsage {
  * accumulate across rounds per slot.
  */
 export async function runDebateRounds(options: DebateFanoutOptions): Promise<DebateFanoutResult> {
-	const { host, ctx, topic, models, thinking, rounds: totalRounds, session, widget, agents } = options;
+	const { host, ctx, topic, models, thinking, rounds: totalRounds, session, widget, agents, maxConcurrency } = options;
 	const alive = models.map(() => true);
 	const positions: (string | undefined)[] = models.map(() => undefined);
 	const completedRounds: DebateRound[] = [];
@@ -146,6 +147,7 @@ export async function runDebateRounds(options: DebateFanoutOptions): Promise<Deb
 							observed.partial = result.partialAssistant;
 						}
 					},
+					{ maxConcurrency },
 				);
 			} finally {
 				unsubscribe();

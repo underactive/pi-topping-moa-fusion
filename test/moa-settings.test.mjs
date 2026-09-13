@@ -23,6 +23,7 @@ try {
 	assert.equal(empty.mode, "single");
 	assert.equal(empty.autoResolveConflicts, false);
 	assert.equal(empty.agentDefaultsConfigured, false);
+	assert.equal(empty.maxConcurrentAgents, 1);
 	// A config (or file) lacking `verifier` loads it as undefined — no migration.
 	assert.equal(empty.verifier, undefined);
 	// A file without rosters loads an empty list.
@@ -50,6 +51,7 @@ try {
 		// the parse filter rather than being dropped or folded into `xhigh`.
 		thinkingOverrides: { "test/cheap": "minimal", "test/deep": "max" },
 		rosters: [],
+		maxConcurrentAgents: 4,
 	};
 	config.saveMoaConfig(saved);
 	assert.equal(config.moaSettingsExist(), true);
@@ -59,6 +61,45 @@ try {
 	assert.equal(reloaded.agentDefaultsConfigured, true);
 	assert.deepEqual(reloaded.verifier, verifier);
 	assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")).cheap, cheap);
+	assert.equal(reloaded.maxConcurrentAgents, 4);
+
+	// Out-of-range maxConcurrentAgents values clamp into 1–8.
+	const concurrencyClamped = JSON.parse(readFileSync(settingsPath, "utf8"));
+	concurrencyClamped.maxConcurrentAgents = 0;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 1);
+	concurrencyClamped.maxConcurrentAgents = -3;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 1);
+	concurrencyClamped.maxConcurrentAgents = 9;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 8);
+	concurrencyClamped.maxConcurrentAgents = 100;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 8);
+
+	// Rounding and malformed maxConcurrentAgents fall back or clamp.
+	concurrencyClamped.maxConcurrentAgents = 2.4;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 2);
+	concurrencyClamped.maxConcurrentAgents = 2.5;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 3);
+	concurrencyClamped.maxConcurrentAgents = "four";
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 1);
+	concurrencyClamped.maxConcurrentAgents = null;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 1);
+	concurrencyClamped.maxConcurrentAgents = true;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 1);
+	concurrencyClamped.maxConcurrentAgents = {};
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 1);
+	delete concurrencyClamped.maxConcurrentAgents;
+	writeFileSync(settingsPath, `${JSON.stringify(concurrencyClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxConcurrentAgents, 1);
 
 	// Out-of-range and non-finite debateRounds values clamp into the 2–5 picker range.
 	const clamped = JSON.parse(readFileSync(settingsPath, "utf8"));

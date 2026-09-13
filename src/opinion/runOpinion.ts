@@ -114,7 +114,7 @@ export async function runInteractiveOpinion(
 			host.setRunningProgressWidget(widget);
 			let outcome;
 			try {
-				outcome = await runOpinionFanout({ host, ctx, question, models, thinking, session, widget, agents });
+				outcome = await runOpinionFanout({ host, ctx, question, models, thinking, session, widget, agents, maxConcurrency: settings.maxConcurrentAgents });
 			} finally {
 				host.setRunningProgressWidget(undefined);
 				widget.stopWidget();

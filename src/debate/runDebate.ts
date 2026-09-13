@@ -101,7 +101,7 @@ export async function runInteractiveDebate(
 			host.setRunningProgressWidget(widget);
 			let outcome;
 			try {
-				outcome = await runDebateRounds({ host, ctx, topic, models, thinking, rounds, session, widget, agents });
+				outcome = await runDebateRounds({ host, ctx, topic, models, thinking, rounds, session, widget, agents, maxConcurrency: settings.maxConcurrentAgents });
 			} finally {
 				host.setRunningProgressWidget(undefined);
 				widget.stopWidget();

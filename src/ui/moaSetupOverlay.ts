@@ -17,6 +17,8 @@ import { type Component, type TUI } from "@earendil-works/pi-tui";
 import {
 	defaultThinkingForModel,
 	loadMoaConfig,
+	MAX_CONCURRENT_AGENTS,
+	MIN_CONCURRENT_AGENTS,
 	saveMoaConfig,
 	type MoaConfig,
 } from "../config/settings.ts";
@@ -77,6 +79,7 @@ interface SetupDraft {
 	thinkingOverrides: Record<string, ThinkingLevel>;
 	autoResolveConflicts: boolean;
 	useSummaryName: boolean;
+	maxConcurrentAgents: number;
 	rosters: PlanRoster[];
 }
 
@@ -90,6 +93,7 @@ class MoaSetupComponent implements Component {
 	private readonly menu: MenuComponent;
 	private autoResolveConflicts: boolean;
 	private useSummaryName: boolean;
+	private maxConcurrentAgents: number;
 
 	constructor(
 		private readonly tui: TUI,
@@ -105,6 +109,7 @@ class MoaSetupComponent implements Component {
 		this.twoPane = new TwoPaneModelThinking(tui, theme, availableRefs, config, currentThinking, ctx);
 		this.autoResolveConflicts = draft.autoResolveConflicts;
 		this.useSummaryName = draft.useSummaryName;
+		this.maxConcurrentAgents = draft.maxConcurrentAgents;
 		const slotItem = (slotIndex: number): MenuItem => ({
 			id: `role-${slotIndex}`,
 			label: SLOTS[slotIndex]!.menuLabel,
@@ -130,6 +135,17 @@ class MoaSetupComponent implements Component {
 				{ title: "options", items: [
 					{ id: "auto-resolve", label: "auto resolve conflicts", value: this.autoResolveConflicts, onChange: (value: boolean) => { this.autoResolveConflicts = value; } },
 					{ id: "use-summary-name", label: "summarize plan names", value: this.useSummaryName, onChange: (value: boolean) => { this.useSummaryName = value; } },
+					{
+						id: "max-concurrent-agents",
+						label: "max concurrent agents",
+						values: Array.from(
+							{ length: MAX_CONCURRENT_AGENTS - MIN_CONCURRENT_AGENTS + 1 },
+							(_unused, index) => String(MIN_CONCURRENT_AGENTS + index),
+						),
+						valueIndex: this.maxConcurrentAgents - MIN_CONCURRENT_AGENTS,
+						description: "Child agents running at once in MoA, opinion, debate and plan subagent fan-outs. Keep at 1 for local agents.",
+						onChange: (valueIndex: number) => { this.maxConcurrentAgents = MIN_CONCURRENT_AGENTS + valueIndex; },
+					},
 				] },
 			],
 			buttons: [
@@ -168,6 +184,7 @@ class MoaSetupComponent implements Component {
 			thinkingOverrides: { ...this.draft.thinkingOverrides },
 			autoResolveConflicts: this.autoResolveConflicts,
 			useSummaryName: this.useSummaryName,
+			maxConcurrentAgents: this.maxConcurrentAgents,
 			rosters: [...this.draft.rosters],
 		};
 	}
@@ -299,6 +316,7 @@ export async function showMoaSetup(
 		thinkingOverrides: {},
 		autoResolveConflicts: saved.autoResolveConflicts,
 		useSummaryName: saved.useSummaryName,
+		maxConcurrentAgents: saved.maxConcurrentAgents,
 		rosters: [...saved.rosters],
 	};
 
@@ -325,6 +343,9 @@ export async function showMoaSetup(
 		);
 		if (result === undefined) return false;
 		if (result.action === "rosters") {
+			draft.autoResolveConflicts = result.draft.autoResolveConflicts;
+			draft.useSummaryName = result.draft.useSummaryName;
+			draft.maxConcurrentAgents = result.draft.maxConcurrentAgents;
 			draft.rosters = await showRosterManager(ctx, draft.rosters, { currentThinking });
 			continue;
 		}
@@ -360,6 +381,7 @@ export async function showMoaSetup(
 		agentDefaultsConfigured: true,
 		autoResolveConflicts: finalDraft.autoResolveConflicts,
 		useSummaryName: finalDraft.useSummaryName,
+		maxConcurrentAgents: finalDraft.maxConcurrentAgents,
 		cheap: finalDraft.selections[AGENT_SLOT_COUNT],
 		rosters: finalDraft.rosters,
 		thinkingOverrides: { ...current.thinkingOverrides, ...finalDraft.thinkingOverrides },

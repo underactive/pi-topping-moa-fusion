@@ -160,7 +160,7 @@ During the run, `F3` opens the live observer and `Esc` or `F4` opens cancellatio
 | `/mf-opinion` | — | Ask 1–5 models for independent read-only opinions about the repository |
 | `/mf-debate` | — | Run a read-only multi-round debate between up to 5 models |
 | `/mf-preview` | — | Toggle the inline/live preview of streamed agent output |
-| `/mf-plan-settings` | — | Configure the explore and cheap/fast agents, named agent rosters for the MoA roles, and plan options |
+| `/mf-plan-settings` | — | Configure the explore and cheap/fast agents, named agent rosters for the MoA roles, plan options, and max concurrent agents |
 | `/mf-plan-implement` | — | Retry implementation of the last approved MoA plan, optionally with a different model |
 | `/mf-plan-clear` | — | Clear completed plan state so the next `/mf-plan` starts a fresh round; approved plans stay in `.pi/mf-plan/` and remain re-implementable |
 | `--mf-plan` | — | Start pi with plan mode enabled |
@@ -274,6 +274,16 @@ Rosters persist in `~/.pi/agent/mf-plan/settings.json`:
 
 Names are 1–24 alphanumeric characters, unique case-insensitively, up to 20 rosters. The roster manager stages every edit in memory — nothing is written until the settings overlay's **Save and Close**.
 
+#### Max concurrent agents
+
+The **max concurrent agents** row in `/mf-plan-settings` controls how many child-agent subprocesses may run at once during MoA proposer fan-out (including retries), opinion fan-out, debate rounds (including retries), and `mf_plan_subagent` parallel mode. Use ←/→ to pick a value from 1 to 8. The setting persists in `~/.pi/agent/mf-plan/settings.json`:
+
+```json
+{ "maxConcurrentAgents": 1 }
+```
+
+The default is **1** — several local models running in parallel are usually unusably slow, so keep this at 1 for local agents and raise it for cloud models. Out-of-range values clamp to 1–8; malformed values fall back to 1. The limit is read once when a run starts, so edits apply to the next run rather than one already in flight.
+
 **First run.** Until the setup overlay has been saved once, `/mf-plan` opens it — set up agents and rosters before planning — instead of the plan prompt. Only interactive TUI sessions are gated; headless plan mode is unaffected.
 
 **Agentic provider bridges.** Some pi providers are not plain chat-completion APIs but bridges to full coding agents with their *own* local edit/shell tools (e.g. pi-cursor-bridge, whose models run Cursor agents in the repo cwd). Pi's tool allowlist cannot restrain those agent-side tools, so plan mode adds two more layers:
@@ -283,7 +293,7 @@ Names are 1–24 alphanumeric characters, unique case-insensitively, up to 20 ro
 
 ### Parallel execution
 
-In the single-model flow, Phase 1 launches up to **3 moa-explore agents in parallel** and Phase 2 up to **1 mf-plan agent**. Concurrency is capped at 5 simultaneous processes, with a per-task output cap of 50KB.
+In the single-model flow, Phase 1 launches up to **3 moa-explore agents in parallel** and Phase 2 up to **1 mf-plan agent**. Child-agent concurrency is configurable from 1 to 8 in `/mf-plan-settings` (default **1**); it applies to MoA proposer fan-out, opinion fan-out, debate rounds, and `mf_plan_subagent` parallel mode, including every retry batch. The separate **8-task submission cap** per batch is unchanged. Per-task output is capped at 50KB.
 
 ```
 mf_plan_subagent({

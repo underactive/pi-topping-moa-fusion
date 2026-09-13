@@ -21,6 +21,21 @@ import { parseRosters, type PlanRoster } from "./rosters.ts";
 
 export type MoaMode = "single" | "moa";
 
+export const MIN_CONCURRENT_AGENTS = 1;
+export const MAX_CONCURRENT_AGENTS = 8;
+export const DEFAULT_MAX_CONCURRENT_AGENTS = MIN_CONCURRENT_AGENTS;
+
+/**
+ * The one place a loaded/passed concurrency value becomes safe: missing,
+ * non-numeric, NaN and infinite values fall back to the default; finite
+ * numbers are rounded to an integer and clamped into [MIN, MAX], so a
+ * fractional or out-of-range value can never reach the runner.
+ */
+export function normalizeMaxConcurrentAgents(value: unknown): number {
+	if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_MAX_CONCURRENT_AGENTS;
+	return Math.min(MAX_CONCURRENT_AGENTS, Math.max(MIN_CONCURRENT_AGENTS, Math.round(value)));
+}
+
 export interface MoaConfig {
 	mode: MoaMode;
 	proposers: ModelRef[];
@@ -28,6 +43,8 @@ export interface MoaConfig {
 	debateModels: ModelRef[];
 	/** Round ceiling for /mf-debate, clamped to the picker's 2–5 range. */
 	debateRounds: number;
+	/** Child agents allowed to run at once in any fan-out, clamped to 1–8. Defaults to 1 — parallel local agents are unusably slow. */
+	maxConcurrentAgents: number;
 	synthesizer?: ModelRef;
 	implementer?: ModelRef;
 	verifier?: ModelRef;
@@ -56,6 +73,7 @@ function emptyConfig(): MoaConfig {
 		opinionModels: [],
 		debateModels: [],
 		debateRounds: 3,
+		maxConcurrentAgents: DEFAULT_MAX_CONCURRENT_AGENTS,
 		synthesizer: undefined,
 		implementer: undefined,
 		verifier: undefined,
@@ -89,6 +107,7 @@ function parseSettingsFile(path: string): MoaConfig {
 		const debateRounds = typeof parsed.debateRounds === "number" && Number.isFinite(parsed.debateRounds)
 			? Math.min(5, Math.max(2, Math.round(parsed.debateRounds)))
 			: 3;
+		const maxConcurrentAgents = normalizeMaxConcurrentAgents(parsed.maxConcurrentAgents);
 		const synthesizer = isModelRef(parsed.synthesizer) ? parsed.synthesizer : undefined;
 		const implementer = isModelRef(parsed.implementer) ? parsed.implementer : undefined;
 		const verifier = isModelRef(parsed.verifier) ? parsed.verifier : undefined;
@@ -113,7 +132,7 @@ function parseSettingsFile(path: string): MoaConfig {
 		const agentDefaultsConfigured = parsed.agentDefaultsConfigured === true;
 		const rosters = parseRosters(parsed.rosters);
 
-		return { mode, proposers, opinionModels, debateModels, debateRounds, synthesizer, implementer, verifier, cheap, thinkingOverrides, rosters, autoResolveConflicts, useSummaryName, agentDefaultsConfigured };
+		return { mode, proposers, opinionModels, debateModels, debateRounds, maxConcurrentAgents, synthesizer, implementer, verifier, cheap, thinkingOverrides, rosters, autoResolveConflicts, useSummaryName, agentDefaultsConfigured };
 	} catch (err) {
 		console.error("mf-plan: failed to parse settings, using defaults:", err);
 		return emptyConfig();

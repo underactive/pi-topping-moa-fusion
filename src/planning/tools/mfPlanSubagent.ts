@@ -6,6 +6,7 @@ import { Type } from "typebox";
 import * as path from "node:path";
 
 import { installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../../agents/authoritative.ts";
+import { loadMoaConfig } from "../../config/settings.ts";
 import { discoverAgents, parseAgentFile } from "../../agents/discovery.ts";
 import { modelExtensionOptions } from "../../moa/modelRuntime.ts";
 import { CancelRun, type CancelRowExtras, type CancelSession } from "../../runtime/cancelRun.ts";
@@ -150,6 +151,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 				// Parallel mode — each task gets its own abort signal (combined
 				// with pi's turn signal) so F4 can kill one stuck agent
 				// while its siblings keep working.
+				const maxConcurrency = loadMoaConfig().maxConcurrentAgents;
 				const tasks = params.tasks!;
 				const run = new CancelRun();
 				const extras: CancelRowExtras[] = tasks.map(() => ({}));
@@ -202,6 +204,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 								loopCount: activityLoopCount(result.activity, histories[index]),
 							};
 						},
+						{ maxConcurrency },
 					);
 
 					// resolveOnAbort makes the runner resolve on abort; rethrow so a

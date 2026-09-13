@@ -29,10 +29,11 @@ export interface FanoutPhaseOptions {
 	widget: MoaProgressWidget;
 	agents: AgentConfig[];
 	warnIfMutated(phase: string): Promise<void>;
+	maxConcurrency: number;
 }
 
 export async function runFanoutPhase(options: FanoutPhaseOptions): Promise<FanoutPhaseResult> {
-	const { host, runContext, ctx, prompt, proposers, proposerThinking, session, widget, agents, warnIfMutated } = options;
+	const { host, runContext, ctx, prompt, proposers, proposerThinking, session, widget, agents, warnIfMutated, maxConcurrency } = options;
 	widget.startFanout(proposers, proposerThinking);
 	const observe: ObserveSession = {
 		title: "MoA fan-out",
@@ -64,7 +65,7 @@ export async function runFanoutPhase(options: FanoutPhaseOptions): Promise<Fanou
 		};
 	};
 	const runFanout = (tasks: ModelParallelAgentTask[], indexMap: (index: number) => number, currentRun: CancelRun) =>
-		runWidgetFanout({ ctx, agents, tasks, run: currentRun, session, widget, observe, models: proposers, indexMap });
+		runWidgetFanout({ ctx, agents, tasks, run: currentRun, session, widget, observe, models: proposers, indexMap, maxConcurrency });
 
 	// The planning contract travels inside the task text — the only channel
 	// guaranteed to survive a bridge's system-prompt override. The observer keeps

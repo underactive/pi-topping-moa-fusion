@@ -1,6 +1,7 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../agents/authoritative.ts";
+import { loadMoaConfig } from "../config/settings.ts";
 import { discoverAgents } from "../agents/discovery.ts";
 import { cleanupProposalFiles, sweepStaleProposalFiles } from "../planning/planFile.ts";
 import type { CancelSession } from "../runtime/cancelRun.ts";
@@ -59,6 +60,7 @@ export async function runMoaOrchestration(
 	try {
 		installShippedAgents();
 		sweepStaleProposalFiles();
+		const maxConcurrency = loadMoaConfig().maxConcurrentAgents;
 		const discovery = discoverAgents(ctx.cwd, "user");
 		const agents = withAuthoritativeMoaAgents(discovery.agents, shippedAgentsDir());
 		const tripwire = new MutationTripwire();
@@ -78,6 +80,7 @@ export async function runMoaOrchestration(
 			widget,
 			agents,
 			warnIfMutated,
+			maxConcurrency,
 		});
 		if (fanout.status !== "continue") return fanout.status;
 		const synthesis = await runSynthesisPhase(runContext, {

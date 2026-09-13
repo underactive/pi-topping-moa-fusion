@@ -19,6 +19,7 @@ export interface WidgetFanoutOptions {
 	observe: ObserveSession;
 	models: ModelRef[];
 	indexMap: (index: number) => number;
+	maxConcurrency: number;
 }
 
 /**
@@ -27,7 +28,7 @@ export interface WidgetFanoutOptions {
  * settle/onProgress plumbing shared by every MoA fan-out variant.
  */
 export async function runWidgetFanout(options: WidgetFanoutOptions): Promise<SingleResult[]> {
-	const { ctx, agents, tasks, run, session, widget, observe, models, indexMap } = options;
+	const { ctx, agents, tasks, run, session, widget, observe, models, indexMap, maxConcurrency } = options;
 	const unsubscribe = run.onChange(() => {
 		run.agents.forEach((agent, index) => {
 			if (agent.state === "cancelling") widget.update(indexMap(index), "cancelling");
@@ -80,6 +81,7 @@ export async function runWidgetFanout(options: WidgetFanoutOptions): Promise<Sin
 					observed.partial = result.partialAssistant;
 				}
 			},
+			{ maxConcurrency },
 		);
 	} finally {
 		unsubscribe();
