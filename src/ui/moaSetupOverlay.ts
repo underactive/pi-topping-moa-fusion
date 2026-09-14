@@ -51,8 +51,6 @@ interface SetupSlot {
 	description: string;
 	/** Whether the overview row appends the selected thinking level. */
 	showThinkingValue: boolean;
-	/** Where a confirmed selection is persisted. */
-	target: { kind: "agent"; agentName: string } | { kind: "role" };
 }
 
 const SLOTS: readonly SetupSlot[] = [
@@ -61,14 +59,12 @@ const SLOTS: readonly SetupSlot[] = [
 		title: agent.title,
 		description: agent.description,
 		showThinkingValue: true,
-		target: { kind: "agent", agentName: agent.name },
 	})),
 	{
 		menuLabel: "cheap/fast agent",
 		title: "Cheap / fast agent — plan-file naming",
 		description: "Only summarizes a plan prompt into a short file name. Always called with thinking off and falls back safely if it cannot respond, so pick the cheapest model available.",
 		showThinkingValue: false,
-		target: { kind: "role" },
 	},
 ];
 
