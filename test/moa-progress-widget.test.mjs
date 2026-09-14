@@ -977,4 +977,78 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.stopWidget();
 }
 
+// ── replaceProposerModel: points a settled row at a new model, clears it ──
+{
+	const { ctx, state, current } = fakeCtx("tui", HUE_THEME);
+	const seen = { closeStacked: 0 };
+	const widget = new MoaProgressWidget(ctx, () => CONTEXT_WINDOW, {
+		closeStacked: () => {
+			seen.closeStacked++;
+			state.order.push("closeStacked");
+		},
+	}, PLAN_NAME);
+	widget.startFanout(PROPOSERS, ["high", "low"]);
+	const component = current();
+
+	// Give slot 1 real readings, then cancel it and stop the widget, the way the
+	// replacement prompt does before it opens the select/picker.
+	widget.updateUsage(1, 42_000, 5, 2, 0.456);
+	widget.updateActivity(1, "read 1.ts");
+	widget.updateTranscript(1, [assistantMessage("canceled attempt output")]);
+	widget.update(1, "done");
+	widget.update(1, "cancelled");
+	widget.stopWidget();
+	assert.equal(state.widget, undefined, "stopWidget removes the table before the prompt");
+
+	const NEW = { provider: "google", id: "gemini-3-pro" };
+	widget.replaceProposerModel(1, NEW, "high");
+
+	// The status row is fully reset onto the replacement: new model/level,
+	// freshly queued, every abandoned reading cleared, clock left unstamped.
+	const raw = widget.getStatus(1);
+	assert.equal(raw.ref, NEW, "the row points at the replacement model");
+	assert.equal(raw.thinking, "high", "and its new thinking level");
+	assert.equal(raw.state, "queued", "and reads freshly queued");
+	assert.equal(raw.contextTokens, undefined, "context telemetry is cleared");
+	assert.equal(raw.turns, undefined, "turn telemetry is cleared");
+	assert.equal(raw.toolCalls, undefined, "tool-call telemetry is cleared");
+	assert.equal(raw.costUsd, undefined, "cost telemetry is cleared");
+	assert.equal(raw.outputTokens, undefined, "output telemetry is cleared");
+	assert.equal(raw.activity, undefined, "activity is cleared");
+	assert.deepEqual(raw.activityHistory, [], "activity history is cleared to an empty array");
+	assert.equal(raw.transcript, undefined, "the aborted transcript is cleared");
+	assert.equal(raw.startedAt, undefined, "the elapsed clock is left unstamped");
+	assert.equal(state.mounts, 2, "replaceProposerModel remounts the table after stopWidget");
+
+	const row = widget.progressRows()[1];
+	assert.equal(row.label, "google/gemini-3-pro", "the rendered row names the replacement");
+	assert.equal(row.state, "queued", "and is queued, not the settled trace");
+	assert.equal(row.elapsedMs, 0, "elapsed reads 0 until the slot is promoted to working");
+	assert.equal(row.thinking, "high", "the rendered row carries the new thinking level");
+
+	// Promote it and confirm the MONITOR meter takes the new row's hue (94 =
+	// high) rather than the old low's (92).
+	widget.update(1, "working");
+	driveMeters(widget, current(), 2);
+	const line = current().render(120).find((l) => strip(l).includes("google/gemini-3-pro"));
+	assert.ok(meterHueCodes(line).includes(94), "the replacement meter takes the new (high) hue");
+	assert.ok(!meterHueCodes(line).includes(92), "and not the old (low) hue");
+	widget.stopWidget();
+}
+
+// ── resumeTable: remounts after stopWidget, no-op while mounted ──────────
+{
+	const { widget, state, current } = makeWidget();
+	widget.startFanout(PROPOSERS);
+	assert.equal(state.mounts, 1, "mounted once");
+	widget.resumeTable();
+	assert.equal(state.mounts, 1, "resumeTable is a no-op when the table is already mounted");
+	widget.stopWidget();
+	assert.equal(state.widget, undefined, "stopWidget removes the table");
+	widget.resumeTable();
+	assert.equal(state.mounts, 2, "resumeTable remounts after stopWidget");
+	assert.ok(current() instanceof MoaProgressTableComponent, "resumeTable mounts the agent table");
+	widget.stopWidget();
+}
+
 console.log("MoA progress widget tests passed.");

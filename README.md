@@ -172,7 +172,7 @@ On Mac laptops the top row may send brightness/media keys by default. Enable the
 
 ### Cancelling running subagents
 
-During an MoA fan-out or synthesis, **Esc** opens a cancel overlay. Enter kills the selected agent — its siblings keep going and synthesis proceeds with the surviving proposals; **Cancel ALL** aborts the run and reopens the prompt editor prefilled with your original prompt. Each agent's live tool call is highlighted the same way as the Fusion table's ACTIVITY column.
+During an MoA fan-out or synthesis, **Esc** opens a cancel overlay. Enter cancels the selected agent — its siblings keep going, and once the fan-out settles you are asked, for each cancelled agent, to select a replacement model or continue without it; **Cancel ALL** (including during a replacement run) aborts the run and reopens the prompt editor prefilled with your original prompt. Each agent's live tool call is highlighted the same way as the Fusion table's ACTIVITY column.
 
 During the single-model workflow's `mf_plan_subagent` runs, plain Esc keeps pi's default abort-the-turn behavior; use **F4** to kill an individual agent instead. A cancelled agent reports "cancelled by user" back to the model, which continues with the other agents' results.
 

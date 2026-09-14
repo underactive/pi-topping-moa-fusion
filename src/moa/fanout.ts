@@ -7,6 +7,7 @@ import { getFinalOutput, isFailedResult } from "../runtime/results.ts";
 import type { ModelParallelAgentTask } from "../runtime/runner.ts";
 import { modelRefLabel, TRIGGER_TURN, type ModelRef, type ThinkingLevel } from "../shared/modelRefs.ts";
 import { activityLoopCount } from "../ui/agentStatus.ts";
+import { showModelThinkingPicker } from "../ui/moaModelPicker.ts";
 import type { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import type { ObserveSession } from "../ui/observeOverlay.ts";
 import { runWidgetFanout } from "./fanoutWiring.ts";
@@ -88,6 +89,110 @@ export async function runFanoutPhase(options: FanoutPhaseOptions): Promise<Fanou
 		widget.stopWidget();
 		ctx.ui.notify("MoA run cancelled.");
 		return { status: "cancelled", observe, previousObserveSession };
+	}
+
+	// A proposer cancelled from the cancel overlay must not silently drop out of
+	// the run: the user who killed it decides what replaces it, mirroring the
+	// synthesizer-failure precedent. A slot dropped here stays `cancelled` in
+	// results, so it is already excluded from `succeeded` — "continue without"
+	// needs no other handling. This runs after the cancel-all check and before
+	// the planless-retry pass, so a replacement that returns no plan then gets
+	// that retry for free.
+	const cancelledSlots = results.flatMap((r, i) => r.cancelled ? [i] : []);
+	if (cancelledSlots.length > 0 && ctx.hasUI) {
+		// Stop the stacked overlays and the sticky widget before the modal so the
+		// select/picker are not fighting them. session.run is already undefined
+		// (cleared in runWidgetFanout's finally), so ESC reaches the modal, not a
+		// reopened cancel overlay.
+		session.closeOverlay?.();
+		widget.stopWidget();
+		for (const index of cancelledSlots) {
+			while (true) {
+				const label = modelRefLabel(proposers[index]);
+				const choice = await ctx.ui.select(
+					`Proposer ${index + 1} (${label}) was cancelled — what next?`,
+					["Select a different model", "Continue without this proposer"],
+				);
+				if (choice !== "Select a different model") break;
+				const picked = await showModelThinkingPicker(
+					ctx,
+					host.currentThinkingLevel(),
+					`Replacement for Proposer ${index + 1}`,
+					proposers[index],
+					proposerThinking[index],
+				);
+				if (!picked) continue;
+				// Rewrite the shared phase/synthesis/observe arrays in place: the
+				// same object is held by the widget band, the cost resolution,
+				// synthesis, and the persisted activeRunMoaInfo.
+				proposers[index] = picked.ref;
+				proposerThinking[index] = picked.thinking;
+				host.persistState();
+				widget.replaceProposerModel(index, picked.ref, picked.thinking);
+				// Rewrite the observe row's identity, not just its messages, so F3
+				// shows the replacement and not the cancelled agent's corpse.
+				const observed = observe.agents[index];
+				if (observed) {
+					observed.label = picked.ref.id;
+					observed.model = picked.ref.id;
+					observed.task = proposerTask;
+					observed.messages = [];
+					observed.partial = undefined;
+					observed.state = "working";
+				}
+				const replaceRun = new CancelRun();
+				session.title = "MoA fan-out (replacement)";
+				session.getExtras = () => {
+					const status = widget.getStatus(index);
+					if (!status) return undefined;
+					return {
+						contextTokens: status.contextTokens,
+						contextWindow: resolveContextWindow(ctx, status.ref),
+						activity: status.activity,
+						loopCount: activityLoopCount(status.activity, status.activityHistory),
+					};
+				};
+				// The slot was killed, not planless — rerun the fresh proposer task.
+				const [replacement] = await runFanout(
+					[
+						{
+							agent: "moa-proposer",
+							task: proposerTask,
+							model: modelRefLabel(picked.ref),
+							thinking: picked.thinking,
+							...modelExtensionOptions(ctx, picked.ref),
+							signal: replaceRun.add(modelRefLabel(picked.ref)).signal,
+						},
+					],
+					() => index,
+					replaceRun,
+				);
+				results[index] = replacement;
+				await warnIfMutated("MoA proposer replacement");
+				// Cancel ALL during a replacement ends the run, like the other exits.
+				if (replaceRun.cancelAllRequested) {
+					widget.stopWidget();
+					ctx.ui.notify("MoA run cancelled.");
+					return { status: "cancelled", observe, previousObserveSession };
+				}
+				// A cancelled or planless replacement re-asks the same two options
+				// until the user chooses to move on.
+				if (replacement.cancelled || isFailedResult(replacement)) {
+					session.closeOverlay?.();
+					widget.stopWidget();
+					ctx.ui.notify(
+						`Replacement proposer ${modelRefLabel(picked.ref)} did not produce a plan.`,
+						"warning",
+					);
+					continue;
+				}
+				break;
+			}
+		}
+		// A prompt stopped the widget; re-show the table so the planless-retry pass
+		// and synthesis render into a mounted table even when the user dropped
+		// every cancelled slot.
+		widget.resumeTable();
 	}
 
 	const retryIndices: number[] = [];

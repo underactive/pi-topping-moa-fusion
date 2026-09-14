@@ -398,6 +398,46 @@ export class MoaProgressWidget implements MoaProgressView {
 	}
 
 	/**
+	 * Point a settled proposer row at a replacement model and clear every reading
+	 * from the abandoned attempt, so the row reads as freshly queued. The elapsed
+	 * clock is left unstamped: `update(index, "working")` starts it when the slot
+	 * actually runs. Remounts the table, which the replacement prompt stopped —
+	 * `update()` alone clears only the transcript, leaving stale turns/tools/cost/
+	 * context behind, and `stopWidget()` (needed so the select/picker are not
+	 * fighting the sticky widget) unmounts it, so only `mountTable()` remounts.
+	 */
+	replaceProposerModel(index: number, ref: ModelRef, thinking?: ThinkingLevel): void {
+		const s = this.statuses[index];
+		if (!s) return;
+		s.ref = ref;
+		s.phase = "Plan";
+		s.thinking = thinking;
+		s.state = "queued";
+		s.detail = undefined;
+		// Clear every reading from the abandoned attempt, matching the wasSettled
+		// branch of update(): the row must read as freshly queued, and the
+		// transcriptRevision bump invalidates the preview cache.
+		s.contextTokens = undefined;
+		s.activity = undefined;
+		s.activityHistory = [];
+		s.outputTokens = undefined;
+		s.outputRevision = undefined;
+		s.turns = undefined;
+		s.toolCalls = undefined;
+		s.costUsd = undefined;
+		s.transcript = undefined;
+		s.startedAt = undefined;
+		s.endedAt = undefined;
+		s.transcriptRevision = (s.transcriptRevision ?? 0) + 1;
+		this.mountTable();
+	}
+
+	/** Re-show the table after a prompt stopped it, without changing any row. Idempotent. */
+	resumeTable(): void {
+		this.mountTable();
+	}
+
+	/**
 	 * Move a role row into `working`, starting (or keeping) its elapsed clock.
 	 * Each activation replaces the row's thinking level (with `undefined` when the
 	 * caller cannot supply one), so a stale hue never outlives a model/level swap.
