@@ -123,6 +123,14 @@ if (taskArg?.includes("concurrency-probe")) {
 		assert.equal(observedPeak(), 1, "limit 1 via runParallelAgentsWithModels");
 
 		clearPeaks();
+		const started = [];
+		await runParallelAgentsWithModels(
+			process.cwd(), agents, modelTasks(4), undefined, undefined, undefined,
+			{ maxConcurrency: 1, onStart: (index) => started.push(index) },
+		);
+		assert.deepEqual(started, [0, 1, 2, 3], "each queued model task reports when it acquires the sole slot");
+
+		clearPeaks();
 		await runParallelAgentsWithModels(
 			process.cwd(), agents, modelTasks(4), undefined, undefined, undefined,
 			{ maxConcurrency: 3 },

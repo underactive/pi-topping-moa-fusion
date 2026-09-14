@@ -34,7 +34,7 @@ export interface FanoutPhaseOptions {
 
 export async function runFanoutPhase(options: FanoutPhaseOptions): Promise<FanoutPhaseResult> {
 	const { host, runContext, ctx, prompt, proposers, proposerThinking, session, widget, agents, warnIfMutated, maxConcurrency } = options;
-	widget.startFanout(proposers, proposerThinking);
+	widget.startFanout(proposers, proposerThinking, maxConcurrency);
 	const observe: ObserveSession = {
 		title: "MoA fan-out",
 		phase: "fanout",
@@ -113,7 +113,7 @@ export async function runFanoutPhase(options: FanoutPhaseOptions): Promise<Fanou
 			const ref = proposers[proposerIndex];
 			const label = modelRefLabel(ref);
 			const retryTask = buildProposerRetryTask(proposerTask, getFinalOutput(results[proposerIndex].messages));
-			widget.update(proposerIndex, "working", "retrying: no plan produced");
+			widget.update(proposerIndex, "queued", "retrying: no plan produced");
 			const observed = observe.agents[proposerIndex];
 			if (observed) {
 				observed.state = "working";

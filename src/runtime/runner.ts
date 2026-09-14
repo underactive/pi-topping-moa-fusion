@@ -416,6 +416,8 @@ export interface ModelParallelAgentTask extends ParallelAgentTask {
 export interface ParallelRunOptions {
 	/** Max child processes in flight. Normalized here, so an omitted or malformed value falls back to the safe default. */
 	maxConcurrency?: number;
+	/** Called once a queued task acquires a process-pool slot, immediately before it begins. */
+	onStart?: (index: number) => void;
 }
 
 /** Run multiple agents in parallel with concurrency limit. */
@@ -491,7 +493,7 @@ export async function runParallelAgents(
 		emitParallelUpdate();
 		onEach?.(index, result);
 		return result;
-	});
+	}, options.onStart);
 
 	return results;
 }
@@ -543,7 +545,7 @@ export async function runParallelAgentsWithModels(
 		);
 		onEach?.(index, result);
 		return result;
-	});
+	}, options.onStart);
 
 	return results;
 }

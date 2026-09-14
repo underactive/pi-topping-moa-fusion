@@ -38,6 +38,7 @@ export async function mapWithConcurrencyLimit<TIn, TOut>(
 	items: TIn[],
 	concurrency: number,
 	fn: (item: TIn, index: number) => Promise<TOut>,
+	onStart?: (index: number) => void,
 ): Promise<TOut[]> {
 	if (items.length === 0) return [];
 	const limit = Math.max(1, Math.min(concurrency, items.length));
@@ -47,6 +48,7 @@ export async function mapWithConcurrencyLimit<TIn, TOut>(
 		while (true) {
 			const current = nextIndex++;
 			if (current >= items.length) return;
+			onStart?.(current);
 			results[current] = await fn(items[current], current);
 		}
 	});

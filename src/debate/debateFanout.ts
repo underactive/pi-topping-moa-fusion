@@ -147,7 +147,15 @@ export async function runDebateRounds(options: DebateFanoutOptions): Promise<Deb
 							observed.partial = result.partialAssistant;
 						}
 					},
-					{ maxConcurrency },
+					{
+						maxConcurrency,
+						onStart: (batchIndex) => {
+							const debateIndex = entries[batchIndex].index;
+							widget.update(debateIndex, "working");
+							const observed = observe.agents[debateIndex];
+							if (observed) observed.state = "working";
+						},
+					},
 				);
 			} finally {
 				unsubscribe();
@@ -181,7 +189,7 @@ export async function runDebateRounds(options: DebateFanoutOptions): Promise<Deb
 			}
 		};
 
-		widget.startFanout(models, thinking);
+		widget.startFanout(models, thinking, maxConcurrency);
 
 		let stoppedEarly: string | undefined;
 		for (let round = 1; round <= totalRounds; round++) {
@@ -195,7 +203,7 @@ export async function runDebateRounds(options: DebateFanoutOptions): Promise<Deb
 			if (round > 1) {
 				for (const entry of entries) {
 					// Re-activates the settled row and resets its transcript.
-					widget.update(entry.index, "working", `round ${round}/${totalRounds} · responding`);
+					widget.update(entry.index, "queued", `round ${round}/${totalRounds} · responding`);
 					const observed = observe.agents[entry.index];
 					if (observed) {
 						observed.state = "working";
@@ -235,7 +243,7 @@ export async function runDebateRounds(options: DebateFanoutOptions): Promise<Deb
 				session.title = `Debate agents — round ${round}/${totalRounds} (retry)`;
 				session.getExtras = makeGetExtras(retryEntries);
 				for (const entry of retryEntries) {
-					widget.update(entry.index, "working", "retrying: no position produced");
+					widget.update(entry.index, "queued", "retrying: no position produced");
 					const observed = observe.agents[entry.index];
 					if (observed) {
 						observed.state = "working";

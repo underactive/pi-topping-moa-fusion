@@ -66,10 +66,12 @@ assert.match(runner, /mapWithConcurrencyLimit\(tasks, maxConcurrency/);
 assert.equal((runner.match(/mapWithConcurrencyLimit\(tasks, maxConcurrency/g) ?? []).length, 2);
 
 const fanoutWiring = readFileSync(path.join(root, "src/moa/fanoutWiring.ts"), "utf8");
-assert.match(fanoutWiring, /\{ maxConcurrency \}/);
+assert.match(fanoutWiring, /maxConcurrency,/);
+assert.match(fanoutWiring, /onStart:/);
 
 const debateFanout = readFileSync(path.join(root, "src/debate/debateFanout.ts"), "utf8");
-assert.match(debateFanout, /\{ maxConcurrency \}/);
+assert.match(debateFanout, /maxConcurrency,/);
+assert.match(debateFanout, /onStart:/);
 
 const mfPlanSubagent = readFileSync(path.join(root, "src/planning/tools/mfPlanSubagent.ts"), "utf8");
 assert.match(mfPlanSubagent, /\{ maxConcurrency \}/);

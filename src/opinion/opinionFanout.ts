@@ -37,7 +37,7 @@ export type OpinionFanoutResult =
 export async function runOpinionFanout(options: OpinionFanoutOptions): Promise<OpinionFanoutResult> {
 	const { host, ctx, question, models, thinking, session, widget, agents, maxConcurrency } = options;
 	const originalTask = buildOpinionTask(question);
-	widget.startFanout(models, thinking);
+	widget.startFanout(models, thinking, maxConcurrency);
 	const observe: ObserveSession = {
 		title: "MoA opinions",
 		phase: "fanout",
@@ -108,7 +108,7 @@ export async function runOpinionFanout(options: OpinionFanoutOptions): Promise<O
 				const ref = models[opinionIndex];
 				const label = modelRefLabel(ref);
 				const retryTask = buildOpinionRetryTask(originalTask, getFinalOutput(results[opinionIndex].messages));
-				widget.update(opinionIndex, "working", "retrying: no opinion produced");
+				widget.update(opinionIndex, "queued", "retrying: no opinion produced");
 				const observed = observe.agents[opinionIndex];
 				if (observed) {
 					observed.state = "working";

@@ -81,7 +81,15 @@ export async function runWidgetFanout(options: WidgetFanoutOptions): Promise<Sin
 					observed.partial = result.partialAssistant;
 				}
 			},
-			{ maxConcurrency },
+			{
+				maxConcurrency,
+				onStart: (index) => {
+					const widgetIndex = indexMap(index);
+					widget.update(widgetIndex, "working");
+					const observed = observe.agents[widgetIndex];
+					if (observed) observed.state = "working";
+				},
+			},
 		);
 	} finally {
 		unsubscribe();

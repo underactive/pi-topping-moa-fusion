@@ -297,12 +297,20 @@ export class MoaProgressWidget implements MoaProgressView {
 	}
 
 	/**
-	 * Start the fan-out phase with the initial (working) proposer statuses.
+	 * Start the fan-out phase, marking only the slots that fit the process-pool
+	 * limit as working. The runner promotes queued slots when they acquire one.
 	 * `thinking[i]` tints proposer `i`'s meter; an absent entry falls to accent.
 	 */
-	startFanout(refs: ModelRef[], thinking: (ThinkingLevel | undefined)[] = []): void {
+	startFanout(refs: ModelRef[], thinking: (ThinkingLevel | undefined)[] = [], maxConcurrency = refs.length): void {
 		const startedAt = Date.now();
-		this.statuses = refs.map((ref, index) => ({ ref, phase: "Plan" as const, state: "working" as const, startedAt, thinking: thinking[index] }));
+		const activeCount = Number.isFinite(maxConcurrency) ? Math.max(1, Math.floor(maxConcurrency)) : refs.length;
+		this.statuses = refs.map((ref, index) => ({
+			ref,
+			phase: "Plan" as const,
+			state: index < activeCount ? "working" as const : "queued" as const,
+			startedAt: index < activeCount ? startedAt : undefined,
+			thinking: thinking[index],
+		}));
 		this.active = "Plan";
 		this.mountTable();
 	}
@@ -341,9 +349,9 @@ export class MoaProgressWidget implements MoaProgressView {
 		const wasSettled = s.state === "done" || s.state === "error" || s.state === "cancelled";
 		s.state = state;
 		s.detail = detail;
-		// Re-activation (a settled proposer being retried) un-freezes the clock
-		// and must not show output from the failed attempt.
-		if (state === "working" && wasSettled) {
+		// A settled proposer entering a queued retry/round must clear its preview
+		// before it can be promoted to working, so it never shows stale output.
+		if ((state === "working" || state === "queued") && wasSettled) {
 			s.transcript = undefined;
 			s.transcriptRevision = (s.transcriptRevision ?? 0) + 1;
 		}

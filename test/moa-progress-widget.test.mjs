@@ -745,6 +745,27 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.stopWidget();
 }
 
+// ── concurrency-limited fan-out queues unassigned proposer slots ──────────
+{
+	const { widget, current } = makeWidget();
+	widget.startFanout(PROPOSERS, [], 1);
+
+	let lines = current().render(100).map(strip);
+	const first = lines.find((line) => line.includes("anthropic/claude-opus-4"));
+	const second = lines.find((line) => line.includes("openai/gpt-5"));
+	assert.ok(first?.includes("exploring"), "the first slot starts working");
+	assert.ok(!first?.includes("○"), "the working slot has a spinner");
+	assert.ok(second?.includes("○"), "the unassigned slot has the queued icon");
+	assert.ok(second?.includes("queued"), "the unassigned slot is queued");
+
+	widget.update(1, "working");
+	lines = current().render(100).map(strip);
+	const promoted = lines.find((line) => line.includes("openai/gpt-5"));
+	assert.ok(promoted?.includes("exploring"), "a pool-start transition promotes the queued slot");
+	assert.ok(!promoted?.includes("○"), "a promoted slot no longer renders as queued");
+	widget.stopWidget();
+}
+
 // ── phase grouping: queued rows render dim under their own headings ───────
 {
 	const { widget, current } = makeWidget();
