@@ -434,7 +434,7 @@ export async function runVerificationDecision(deps: {
 			// Reactivate the Implement row for the repair round and leave the table
 			// mounted; the next settled turn re-enters this verification flow.
 			widget?.settleRoleRow("Verify", "done");
-			if (handoff.model) widget?.switchToImplementing(handoff.model, "addressing verifier findings…", handoff.thinking);
+			if (handoff.model) widget?.switchToImplementing(handoff.model, "addressing verifier findings", handoff.thinking);
 			host.markImplementationPending(ctx);
 			const repairNote = buildRepairNote(parsed, failedScripts);
 			await host.pi.sendUserMessage(
@@ -492,7 +492,7 @@ export async function runImplementationVerification(
 	widget?.setActivePhase("Verify");
 	// `activeVerifierThinking` is not declared yet; the initial project-checks
 	// activation carries the handoff's verifier level, which it is seeded from.
-	widget?.switchToVerifying(verifier, "running project checks…", handoff.verifierThinking);
+	widget?.switchToVerifying(verifier, "running project checks", handoff.verifierThinking);
 
 	// Diff and script gate run in the parent, BEFORE the verifier's mutation
 	// tripwire is armed: `npm test` may legitimately write snapshots/coverage,
@@ -532,7 +532,7 @@ export async function runImplementationVerification(
 
 	const runVerifierPreflight = async (): Promise<VerifierRunOutcome> => {
 		const verifier = activeVerifier;
-		widget?.switchToVerifying(verifier, "checking verifier…", activeVerifierThinking);
+		widget?.switchToVerifying(verifier, "checking verifier", activeVerifierThinking);
 		const result = await runVerifier(
 			ctx.cwd, agents, "moa-verifier", "Reply with the single word ok", undefined, undefined, undefined,
 			modelRefLabel(verifier), activeVerifierThinking, {
@@ -548,7 +548,7 @@ export async function runImplementationVerification(
 		const tripwire = new MutationTripwire();
 		await tripwire.arm(ctx.cwd);
 
-		widget?.switchToVerifying(verifier, "verifying implementation…", activeVerifierThinking);
+		widget?.switchToVerifying(verifier, "verifying implementation", activeVerifierThinking);
 		widget?.updateRoleTranscript("Verify", []);
 
 		const session: CancelSession = { title: "MoA verification", run: undefined, overlayOpen: false };

@@ -397,7 +397,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 					Implement: implementationHandoff.model,
 					Verify: implementationHandoff.verifier,
 				});
-				widget.switchToImplementing(implementationHandoff.model, "implementing plan…", implementationHandoff.thinking);
+				widget.switchToImplementing(implementationHandoff.model, "implementing plan", implementationHandoff.thinking);
 				activeProgressWidget = widget;
 			}
 			if (ctx) updateStatus(ctx);

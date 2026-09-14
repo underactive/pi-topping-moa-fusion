@@ -84,7 +84,7 @@ export async function runCriteriaGeneration(input: {
 	observe?: ObserveSession;
 }): Promise<{ criteria: VerificationCriterion[]; markdown: string } | undefined> {
 	const { ctx, agents, synthesizer, thinking, plan, session, widget } = input;
-	widget?.switchToSynthesizing(synthesizer, "writing verification criteria…", thinking);
+	widget?.switchToSynthesizing(synthesizer, "writing verification criteria", thinking);
 	const run = new CancelRun();
 	const slot = run.add(modelRefLabel(synthesizer));
 	if (session) {

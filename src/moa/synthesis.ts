@@ -40,7 +40,7 @@ export async function runSynthesisPhase(
 ): Promise<SynthesisPhaseResult> {
 	const { host, session, widget } = runContext;
 	const { ctx, prompt, proposers, succeeded, observe, agents, warnIfMutated } = options;
-	widget.switchToSynthesizing(runContext.synthesizer, "adjudicating proposed plans…", runContext.synthesizerThinking);
+	widget.switchToSynthesizing(runContext.synthesizer, "adjudicating proposed plans", runContext.synthesizerThinking);
 
 	// Proposals are both inlined and staged on disk. Inlining is what
 	// guarantees the synthesizer actually weighs every proposal — behind a
@@ -162,7 +162,7 @@ export async function runSynthesisPhase(
 			widget.stopWidget();
 			const action = await resolveSynthesizerFailure(getResultOutput(round.result));
 			if (action === "abandon") break;
-			widget.switchToSynthesizing(runContext.synthesizer, action === "switch" ? "retrying with a new model…" : "retrying…", runContext.synthesizerThinking);
+			widget.switchToSynthesizing(runContext.synthesizer, action === "switch" ? "retrying with a new model" : "retrying", runContext.synthesizerThinking);
 			round = await runSynthesizerRound(task);
 		}
 		return round;
@@ -237,7 +237,7 @@ export async function runSynthesisPhase(
 			}
 			runContext.synthConversation.push(`Synthesizer asked: ${question}\nUser answered: ${answer.trim()}\n\nNow produce the full plan.`);
 			rebuildSynthTask();
-			widget.switchToSynthesizing(runContext.synthesizer, "adjudicating proposed plans…", runContext.synthesizerThinking);
+			widget.switchToSynthesizing(runContext.synthesizer, "adjudicating proposed plans", runContext.synthesizerThinking);
 			continue;
 		}
 
@@ -251,7 +251,7 @@ export async function runSynthesisPhase(
 			const synthRetryCorr = buildRetryCorrection(SYNTHESIZER_RETRY_HEADER, synthOutput);
 			runContext.synthConversation.push(synthRetryCorr);
 			rebuildSynthTask();
-			widget.switchToSynthesizing(runContext.synthesizer, "retrying: no plan produced…", runContext.synthesizerThinking);
+			widget.switchToSynthesizing(runContext.synthesizer, "retrying: no plan produced", runContext.synthesizerThinking);
 			continue;
 		}
 
@@ -268,7 +268,7 @@ export async function runSynthesisPhase(
 			const verdictRetryCorr = buildRetryCorrection(buildVerdictRetryHeader(missingVerdicts), synthOutput);
 			runContext.synthConversation.push(verdictRetryCorr);
 			rebuildSynthTask();
-			widget.switchToSynthesizing(runContext.synthesizer, "retrying: missing proposer verdicts…", runContext.synthesizerThinking);
+			widget.switchToSynthesizing(runContext.synthesizer, "retrying: missing proposer verdicts", runContext.synthesizerThinking);
 			continue;
 		}
 
@@ -283,7 +283,7 @@ export async function runSynthesisPhase(
 			const contextRetryCorr = buildRetryCorrection(buildContextRetryHeader(missingContext), synthOutput);
 			runContext.synthConversation.push(contextRetryCorr);
 			rebuildSynthTask();
-			widget.switchToSynthesizing(runContext.synthesizer, "retrying: missing context sections…", runContext.synthesizerThinking);
+			widget.switchToSynthesizing(runContext.synthesizer, "retrying: missing context sections", runContext.synthesizerThinking);
 			continue;
 		}
 		if (!questionMatch && missingContext.length === 0) contextSubsectionsSeen = true;
@@ -341,7 +341,7 @@ export async function runSynthesisPhase(
 
 				runContext.synthConversation.push(feedback);
 				rebuildSynthTask();
-				widget.switchToSynthesizing(runContext.synthesizer, "synthesizing plan…", runContext.synthesizerThinking);
+				widget.switchToSynthesizing(runContext.synthesizer, "synthesizing plan", runContext.synthesizerThinking);
 				if (isLastRound) {
 					const finalRound = await runSynthWithRecovery(synthTask);
 					if (finalRound.cancelled) {

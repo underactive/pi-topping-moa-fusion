@@ -141,7 +141,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 {
 	const { widget, state } = makeWidget("print");
 	widget.startFanout(PROPOSERS);
-	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan…");
+	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan");
 	assert.equal(state.mounts, 1, "every mode takes the same widget path");
 	widget.stopWidget();
 	assert.equal(state.widget, undefined);
@@ -154,7 +154,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	assert.equal(state.mounts, 1, "fan-out mounts the widget");
 	assert.ok(current() instanceof MoaProgressTableComponent, "fan-out renders the agent table");
 
-	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan…");
+	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan");
 	assert.equal(state.mounts, 1, "synthesis reuses the mounted table rather than remounting");
 
 	widget.stopWidget();
@@ -202,7 +202,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.queueRoleRow("Synthesize", SYNTHESIZER);
 	widget.updateActivity(0, "read  src/a/very/long/path/to/some/file.ts");
 	widget.updateActivity(1, 'grep  "handleRequest"');
-	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing…");
+	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing");
 	widget.updateRoleActivity("Synthesize", "bash  npm test");
 
 	const lines = current().render(140);
@@ -437,7 +437,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	assert.equal(widget.togglePreview(), false, "preview hidden");
 	widget.updateTranscript(0, [assistantMessage("hidden-proposer-0")]);
 	widget.updateTranscript(1, [assistantMessage("hidden-proposer-1")]);
-	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing…");
+	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing");
 	widget.updateRoleTranscript("Synthesize", [assistantMessage("hidden-synthesizer")]);
 
 	const hidden = component.render(80).map(strip);
@@ -506,7 +506,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.update(0, "done");
 	widget.update(1, "done");
 
-	widget.switchToSynthesizing(SYNTHESIZER, "adjudicating proposed plans…");
+	widget.switchToSynthesizing(SYNTHESIZER, "adjudicating proposed plans");
 	assert.equal(state.mounts, 1, "synthesis must reuse the fan-out table");
 	assert.equal(current(), fanoutComponent);
 
@@ -529,7 +529,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	assert.equal(state.widget, undefined, "stopWidget removes the widget");
 	assert.equal(state.disposed, 1, "removal disposes the component (clearing its timer)");
 
-	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan…");
+	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan");
 	assert.equal(state.mounts, 2, "a synthesis round after a prompt remounts");
 	assert.ok(current().render(100).some((l) => strip(l).includes("google/gemini-3-pro")));
 
@@ -779,9 +779,9 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.update(0, "done");
 	widget.update(1, "done");
 
-	widget.switchToSynthesizing(SYNTHESIZER, "adjudicating proposed plans…");
-	widget.switchToImplementing(IMPLEMENTER, "implementing plan…");
-	widget.switchToVerifying(VERIFIER, "verifying implementation…");
+	widget.switchToSynthesizing(SYNTHESIZER, "adjudicating proposed plans");
+	widget.switchToImplementing(IMPLEMENTER, "implementing plan");
+	widget.switchToVerifying(VERIFIER, "verifying implementation");
 
 	// Wide enough that the status column shows each role's full status text.
 	const lines = current().render(140).map(strip);
@@ -801,6 +801,7 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 		"phase groups render in Plan → Synthesize → Implement → Verify order",
 	);
 	assert.equal(lines[indexOf("implementing plan")].includes("✓"), false, "the working implementer row spins rather than ticks");
+	assert.ok(widget.progressRows().every((row) => !/[.…]$/.test(row.statusText)), "status labels do not end with ellipses");
 
 	// Settling a role row freezes it with a tick under its own heading. The
 	// verifier shares a model ref with a proposer, so look below the heading.

@@ -186,7 +186,7 @@ try {
 	assert.ok(sentMessages[0].includes("The previous implementation attempt failed with: Rate limit reached"));
 	assert.deepEqual(
 		widgetCalls.at(-1),
-		["switchToImplementing", validHandoff.model, "retrying implementation…", validHandoff.thinking],
+		["switchToImplementing", validHandoff.model, "retrying implementation", validHandoff.thinking],
 		"a retry restarts the adopted table's Implement row with the same model and its unchanged thinking level",
 	);
 	assert.equal(widgetStopped, 0, "a retry keeps the table mounted");
@@ -217,7 +217,7 @@ try {
 	const band = widgetCalls.find(([name]) => name === "setPhaseModels");
 	assert.ok(band, "switching models refreshes the band");
 	assert.deepEqual(band[1].Implement, pickedRef, "the band's Implement cell shows the newly chosen model");
-	assert.deepEqual(widgetCalls.at(-1), ["switchToImplementing", pickedRef, "retrying implementation…", "high"], "the Implement row restarts under the new model and its newly selected thinking level");
+	assert.deepEqual(widgetCalls.at(-1), ["switchToImplementing", pickedRef, "retrying implementation", "high"], "the Implement row restarts under the new model and its newly selected thinking level");
 	assert.equal(sentMessages.length, 1, "and the kickoff is re-sent");
 	assert.ok(sentMessages[0].includes("Switched implementation model to openai/gpt-5"));
 	currentHandoff = validHandoff;

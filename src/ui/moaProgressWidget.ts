@@ -539,7 +539,7 @@ export class MoaProgressWidget implements MoaProgressView {
 	private toRow(s: ProposerStatus, phase: MoaPhase, workingText: string, now: number, firstOfPhase: boolean): ProgressRow {
 		const statusText =
 			s.state === "working" ? (s.detail ?? workingText)
-			: s.state === "cancelling" ? "cancelling…"
+			: s.state === "cancelling" ? "cancelling"
 			: s.state === "cancelled" ? "cancelled"
 			: s.state === "error" ? s.detail ?? "error"
 			: s.state === "queued" ? "queued"

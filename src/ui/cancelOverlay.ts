@@ -150,7 +150,7 @@ class CancelOverlayComponent implements Component {
 				: spin;
 			const stateText =
 				agent.state === "running" ? "running"
-				: agent.state === "cancelling" ? "cancelling…"
+				: agent.state === "cancelling" ? "cancelling"
 				: agent.state;
 			const extras = this.session.getExtras?.(i);
 			const bar = extras && (extras.contextTokens !== undefined || extras.contextWindow !== undefined)

@@ -77,7 +77,7 @@ try {
 	assert.deepEqual(calls.slice(0, 3), [
 		["settle", "Synthesize", "done"],
 		["models"],
-		["implement", IMPLEMENTER, "implementing plan…", "medium"],
+		["implement", IMPLEMENTER, "implementing plan", "medium"],
 	], "approval settles synthesis before activating implementation under the implementer's thinking level");
 	assert.deepEqual(handoff.model, IMPLEMENTER);
 	assert.deepEqual(handoff.verifier, VERIFIER);
@@ -163,8 +163,8 @@ try {
 		roles: { implementer: IMPLEMENTER, verifier: VERIFIER },
 	});
 	assert.deepEqual(chatCalls, [
-		["synthesizing", SYNTHESIZER, "synthesizing plan…", "low"],
-		["synthesizing", SYNTHESIZER, "synthesizing plan…", "xhigh"],
+		["synthesizing", SYNTHESIZER, "synthesizing plan", "low"],
+		["synthesizing", SYNTHESIZER, "synthesizing plan", "xhigh"],
 	], "each chat round reads the current synthesizer thinking selection afresh");
 
 	// Orchestration publishes its widget to the host's running-progress-widget

@@ -73,7 +73,7 @@ export async function runReviewLoop(options: ReviewLoopOptions): Promise<"done">
 			chatRounds++;
 			synthConversation.push(`The user reviewed your synthesized plan and gave this feedback:\n${feedback.trim()}\n\nRevise the plan accordingly and re-emit the complete final plan. Drop any ## Conflicts or ## Open Question sections.`);
 			rebuildSynthTask();
-			widget.switchToSynthesizing(getSynthesizer(), "synthesizing plan…", getSynthesizerThinking());
+			widget.switchToSynthesizing(getSynthesizer(), "synthesizing plan", getSynthesizerThinking());
 			const synthRound = await runSynthWithRecovery(getSynthTask());
 			widget.stopWidget();
 			await warnIfMutated("MoA synthesis");
@@ -156,7 +156,7 @@ export async function runReviewLoop(options: ReviewLoopOptions): Promise<"done">
 					Implement: handoff.model,
 					Verify: roles?.verifier,
 				});
-				widget.switchToImplementing(handoff.model, "implementing plan…", handoff.thinking);
+				widget.switchToImplementing(handoff.model, "implementing plan", handoff.thinking);
 				host.adoptProgressWidget(widget);
 			}
 			host.markImplementationPending(ctx);

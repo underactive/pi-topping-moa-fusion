@@ -103,10 +103,10 @@ function adoptedRun() {
 	widget.startFanout(PROPOSERS);
 	widget.update(0, "done");
 	widget.update(1, "done");
-	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan…");
+	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan");
 	widget.settleRoleRow("Synthesize", "done");
 	controller.setImplementationHandoff(HANDOFF);
-	widget.switchToImplementing(IMPLEMENTER, "implementing plan…");
+	widget.switchToImplementing(IMPLEMENTER, "implementing plan");
 	controller.moaRunHost.adoptProgressWidget(widget);
 	controller.markImplementationPending(ctx);
 	return { ctx, state, controller, widget };
@@ -243,13 +243,13 @@ try {
 
 		// What the "Retry with …" branch does: re-arm pending and restart the row.
 		controller.markImplementationPending(ctx);
-		widget.switchToImplementing(IMPLEMENTER, "retrying implementation…");
+		widget.switchToImplementing(IMPLEMENTER, "retrying implementation");
 		const restarted = implementRow(widget);
 		assert.equal(restarted.state, "working");
 		assert.equal(restarted.turns, 0, "a settled → working restart clears the turn count");
 		assert.equal(restarted.toolCalls, 0);
 		assert.equal(restarted.transcript, undefined, "a retry clears output from the failed implementation attempt");
-		assert.equal(restarted.statusText, "retrying implementation…");
+		assert.equal(restarted.statusText, "retrying implementation");
 		assert.equal(state.mounts, 1, "the retry reuses the same mounted table");
 
 		runTurn(controller, ctx);
@@ -278,7 +278,7 @@ try {
 		assert.equal(widget.activePhase(), "Implement");
 		const row = implementRow(widget);
 		assert.equal(row.state, "working");
-		assert.equal(row.statusText, "implementing plan…");
+		assert.equal(row.statusText, "implementing plan");
 		assert.equal(row.thinking, "high", "the rebuilt Implement row carries the handoff's thinking level, tinting its meter");
 		assert.equal(widget.progressRows().filter((r) => r.phase === "Plan").length, 0, "proposer rows are not fabricated for a resumed run");
 

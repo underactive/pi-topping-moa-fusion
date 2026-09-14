@@ -234,7 +234,7 @@ export async function runImplementationRetryFlow(
 
 	if (selection.startsWith("Retry with")) {
 		host.markImplementationPending(ctx);
-		if (handoff.model) host.getActiveProgressWidget()?.switchToImplementing(handoff.model, "retrying implementation…", handoff.thinking);
+		if (handoff.model) host.getActiveProgressWidget()?.switchToImplementing(handoff.model, "retrying implementation", handoff.thinking);
 		const note = failureReason
 			? `The previous implementation attempt failed with: ${failureReason}. Review the current state of the code and continue implementing the approved plan.`
 			: "The previous implementation attempt failed. Review the current state of the code and continue implementing the approved plan.";
@@ -280,7 +280,7 @@ export async function runImplementationRetryFlow(
 				Implement: newSelection.ref,
 				Verify: updatedHandoff.verifier,
 			});
-			widget.switchToImplementing(newSelection.ref, "retrying implementation…", newSelection.thinking);
+			widget.switchToImplementing(newSelection.ref, "retrying implementation", newSelection.thinking);
 		}
 
 		const note = `Switched implementation model to ${modelRefLabel(newSelection.ref)}. Review the current state of the code and continue implementing the approved plan.`;

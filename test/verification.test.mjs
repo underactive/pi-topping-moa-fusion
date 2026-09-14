@@ -257,14 +257,14 @@ None.
 	assert.doesNotMatch(source, /new MoaProgressWidget\(/, "verification must not construct its own progress table");
 	assert.doesNotMatch(source, /plan mode · verification/, "the bespoke verification title is gone");
 	assert.match(source, /host\.getActiveProgressWidget\(\)/, "verification reads the adopted table from the host");
-	assert.match(source, /switchToVerifying\(verifier, "running project checks…", handoff\.verifierThinking\)/, "the Verify row activates before the script gate, tinted by the handoff's verifier level");
-	assert.match(source, /switchToVerifying\(verifier, "checking verifier…", activeVerifierThinking\)/, "the preflight reactivation carries the active verifier level");
-	assert.match(source, /switchToVerifying\(verifier, "verifying implementation…", activeVerifierThinking\)/, "and reports the subprocess once it starts, with the active verifier level a fallback keeps in sync");
+	assert.match(source, /switchToVerifying\(verifier, "running project checks", handoff\.verifierThinking\)/, "the Verify row activates before the script gate, tinted by the handoff's verifier level");
+	assert.match(source, /switchToVerifying\(verifier, "checking verifier", activeVerifierThinking\)/, "the preflight reactivation carries the active verifier level");
+	assert.match(source, /switchToVerifying\(verifier, "verifying implementation", activeVerifierThinking\)/, "and reports the subprocess once it starts, with the active verifier level a fallback keeps in sync");
 	assert.match(source, /getRoleStatus\("Verify"\)/);
 	assert.match(source, /updateRoleUsage\(\s*"Verify"/);
 	assert.match(source, /updateRoleActivity\("Verify"/);
 	assert.match(source, /updateRoleOutput\("Verify"/);
-	assert.match(source, /switchToImplementing\(handoff\.model, "addressing verifier findings…", handoff\.thinking\)/, "a repair round reactivates the Implement row under the implementer's level");
+	assert.match(source, /switchToImplementing\(handoff\.model, "addressing verifier findings", handoff\.thinking\)/, "a repair round reactivates the Implement row under the implementer's level");
 	assert.match(source, /host\.stopActiveProgressWidget\(\)/, "terminal outcomes dispose the table");
 	assert.doesNotMatch(source, /getSynthesizerStatus|updateSynthesizer/, "no synthesizer-named shims remain");
 	assert.match(source, /Reply with the single word ok/, "the verifier has a cheap liveness preflight");
@@ -424,7 +424,7 @@ None.
 		assert.equal(events.sent.length, 1, "one repair kickoff is sent");
 		assert.ok(events.sent[0].includes("1. Do the thing."), "the kickoff carries the approved plan");
 		assert.deepEqual(events.finished, [], "a repair round does not finish verification");
-		assert.deepEqual(events.widget.at(-1), ["switchToImplementing", deps.handoff.model, "addressing verifier findings…", deps.handoff.thinking], "the repair round reactivates the implementer under its own thinking level");
+		assert.deepEqual(events.widget.at(-1), ["switchToImplementing", deps.handoff.model, "addressing verifier findings", deps.handoff.thinking], "the repair round reactivates the implementer under its own thinking level");
 	}
 
 	// view → close → accept.
@@ -628,10 +628,10 @@ try {
 			"the initial verifier subprocess runs at the handoff level, and both fallback launches at the fallback level");
 
 		// The Verify row is re-tinted to match at every activation.
-		assert.deepEqual(widgetThinking[0], ["running project checks…", "low"], "the initial project-checks row uses the handoff verifier level");
-		assert.deepEqual(widgetThinking[1], ["checking verifier…", "low"], "the first preflight row uses the handoff verifier level");
+		assert.deepEqual(widgetThinking[0], ["running project checks", "low"], "the initial project-checks row uses the handoff verifier level");
+		assert.deepEqual(widgetThinking[1], ["checking verifier", "low"], "the first preflight row uses the handoff verifier level");
 		const postFallback = widgetThinking.slice(2);
-		assert.deepEqual(postFallback.map(([status]) => status), ["checking verifier…", "verifying implementation…"], "the fallback re-runs preflight then verification");
+		assert.deepEqual(postFallback.map(([status]) => status), ["checking verifier", "verifying implementation"], "the fallback re-runs preflight then verification");
 		assert.ok(postFallback.every(([, thinking]) => thinking === "xhigh"), "every post-fallback Verify activation is re-tinted to the fallback level, never a stale hue");
 
 		// The row hue and the subprocess level agree on the fallback verifier.
