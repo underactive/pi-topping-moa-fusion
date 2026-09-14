@@ -356,7 +356,10 @@ export class MoaProgressWidget implements MoaProgressView {
 			s.transcriptRevision = (s.transcriptRevision ?? 0) + 1;
 		}
 		if (!isActive(state)) s.endedAt ??= Date.now();
-		else s.endedAt = undefined;
+		else {
+			s.startedAt ??= Date.now();
+			s.endedAt = undefined;
+		}
 	}
 
 	/** Update one proposer's live context, turn, tool-call, and cost readings (by index). */
