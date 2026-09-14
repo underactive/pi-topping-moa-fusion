@@ -451,10 +451,12 @@ export async function runParallelAgents(
 		};
 	}
 
+	const startedIndices = new Set<number>();
+
 	const emitParallelUpdate = () => {
 		if (onUpdate) {
-			const running = allResults.filter((r) => r.exitCode === -1).length;
 			const done = allResults.filter((r) => r.exitCode !== -1).length;
+			const running = startedIndices.size - done;
 			onUpdate({
 				details: undefined,
 				content: [{ type: "text", text: `Parallel: ${done}/${allResults.length} done, ${running} running...` }],
@@ -493,7 +495,10 @@ export async function runParallelAgents(
 		emitParallelUpdate();
 		onEach?.(index, result);
 		return result;
-	}, options.onStart);
+	}, (index) => {
+		startedIndices.add(index);
+		options.onStart?.(index);
+	});
 
 	return results;
 }
