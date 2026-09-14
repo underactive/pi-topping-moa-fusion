@@ -29,8 +29,9 @@ const {
 	verificationPassed,
 	runVerificationDecision,
 	runImplementationVerification,
-	MAX_VERIFICATION_REPAIRS,
+	buildVerificationExhaustionHandoff,
 } = await import("../src/moa/verification.ts");
+const { DEFAULT_MAX_VERIFICATION_REPAIRS, normalizeMaxVerificationRepairs } = await import("../src/config/settings.ts");
 const { discoverVerifyScripts, runVerifyScript } = await import("../src/moa/verifyGate.ts");
 
 // ── parseVerificationVerdict across every verdict + missing ──────────────
@@ -118,7 +119,57 @@ None.
 	assert.equal(verificationPassed("partial", []), false);
 	assert.equal(verificationPassed(undefined, []), false);
 	assert.equal(verificationPassed("cannot-verify", [pass]), false);
-	assert.ok(MAX_VERIFICATION_REPAIRS >= 1);
+	// The repair budget is a setting now; 2 remains the default, and the loader
+	// is the one place an out-of-range value becomes safe.
+	assert.equal(DEFAULT_MAX_VERIFICATION_REPAIRS, 2);
+	assert.equal(normalizeMaxVerificationRepairs(undefined), 2);
+	assert.equal(normalizeMaxVerificationRepairs(0), 0);
+	assert.equal(normalizeMaxVerificationRepairs(99), 5);
+}
+
+// ── exhaustion handoff lists every criterion status and the full checklist ──
+{
+	const parsed = parseVerificationVerdict(`## Criteria Verdicts
+- **C1:** pass — src/a.ts:1
+- **C2:** fail — src/b.ts:2
+
+## Verification Result
+**Verdict:** partial
+**Summary:** One criterion still fails.`);
+
+	const handoff = buildVerificationExhaustionHandoff({
+		repairsUsed: 2,
+		maxRepairs: 2,
+		parsed,
+		criteria: [{ id: "C1", text: "Widget exists — src/a.ts" }, { id: "C2", text: "Widget wired — src/b.ts" }],
+		failedScripts: [{ script: "test", command: "npm run test", status: "fail", exitCode: 1, relevantOutput: "boom" }],
+		planFilePath: ".pi/mf-plan/example__plan.md",
+		verificationReportPath: ".pi/mf-plan/example__verification.md",
+		criteriaFilePath: ".pi/mf-plan/example__criteria.md",
+	});
+	assert.match(handoff, /Verifier repair rounds are exhausted \(2 of 2 used\)/);
+	assert.match(handoff, /continue the fix\/verification loop manually/i);
+	assert.match(handoff, /## Criteria status/);
+	assert.match(handoff, /\*\*C1:\*\* pass — src\/a.ts:1/);
+	assert.match(handoff, /\*\*C2:\*\* fail — src\/b.ts:2/);
+	assert.match(handoff, /## Full verification criteria/);
+	assert.match(handoff, /\*\*C2:\*\* Widget wired — src\/b.ts/);
+	assert.match(handoff, /Full verifier report: \.pi\/mf-plan\/example__verification\.md/);
+	assert.match(handoff, /Frozen verification criteria: \.pi\/mf-plan\/example__criteria\.md/);
+	assert.match(handoff, /Failing project checks/);
+
+	// A criterion the verifier never judged is still listed, never dropped.
+	const unjudged = buildVerificationExhaustionHandoff({
+		repairsUsed: 0,
+		maxRepairs: 0,
+		parsed,
+		criteria: [{ id: "C3", text: "Docs updated — README.md" }],
+		failedScripts: [],
+		planFilePath: ".pi/mf-plan/example__plan.md",
+	});
+	assert.match(unjudged, /\*\*C3:\*\* not judged — Docs updated — README\.md/);
+	assert.match(unjudged, /disabled in settings/, "a zero budget reads as disabled, not exhausted");
+	assert.doesNotMatch(unjudged, /Frozen verification criteria:/, "no checklist file is referenced when none is on disk");
 }
 
 // ── repair-prompt summary and report stay readable and bounded ──────────
@@ -277,8 +328,8 @@ None.
 	);
 	assert.match(
 		source,
-		/if \(ctx\.hasUI && repairsUsed < MAX_VERIFICATION_REPAIRS\) \{[\s\S]*?await runVerificationDecision\(\{/,
-		"the repair-eligible branch delegates to the decision loop",
+		/const maxRepairs = config\.maxVerificationRepairs;[\s\S]*?if \(ctx\.hasUI && maxRepairs > 0 && repairsUsed < maxRepairs\) \{[\s\S]*?await runVerificationDecision\(\{/,
+		"the repair-eligible branch delegates to the decision loop using settings",
 	);
 	assert.match(source, /\["View full findings", "Send verifier findings to the implementer", "Accept implementation as-is"\]/, "the TUI decision offers viewing alongside repair and accept");
 	// The viewer needs an overlay surface, so it is gated to the TUI; a non-TUI UI
@@ -297,6 +348,18 @@ None.
 	// without entering the decision loop.
 	assert.match(source, /if \(verificationPassed\(parsed\.verdict, scriptResults\)\) \{[\s\S]*?Verification passed[\s\S]*?finish\("done"\);/, "the success path notifies and finishes without a decision");
 	assert.match(source, /Repair rounds are exhausted\.[\s\S]*?finish\("done"\);/, "the exhausted-repair path notifies and finishes without a decision");
+	assert.match(source, /verification-handoff/, "the exhausted-repair path persists a handoff file");
+	assert.match(source, /Continue fix\/verification using the handoff file:/, "the exhaustion notification includes the handoff path");
+	assert.match(
+		source,
+		/const repoPlanSlug = host\.getPlanRepoSlug\(\) \?\? activeHandoff\.repoPlanSlug;/,
+		"a resumed run with no session slug still writes the handoff under the handoff's own slug",
+	);
+	assert.match(
+		source,
+		/The verification handoff file could not be saved/,
+		"a handoff that cannot be written is reported rather than silently dropped",
+	);
 	assert.match(source, /Verification failed \(\$\{verifierLabel\}\)/, "the full failure is notified before recovery choices");
 	assert.match(source, /Verification could not complete \(\$\{verifierLabel\}\): \$\{titleReason\}/, "the dialog includes model and capped reason");
 	assert.match(source, /Retry with \$\{modelRefLabel\(config\.synthesizer\)\}/, "the synthesizer fallback is offered");
@@ -636,6 +699,104 @@ try {
 
 		// The row hue and the subprocess level agree on the fallback verifier.
 		assert.equal(postFallback.at(-1)[1], subprocessThinking.at(-1), "the Verify row hue matches the level actually handed to the fallback subprocess");
+	} finally {
+		if (prevAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = prevAgentDir;
+		rmSync(workRoot, { recursive: true, force: true });
+		rmSync(agentDir, { recursive: true, force: true });
+	}
+}
+
+// ── exhaustion actually writes the handoff and names it in the notification ──
+// A runtime drive of runImplementationVerification with the repair budget set to
+// 0: no decision dialog may open, the handoff file must land on disk under the
+// handoff's own slug (the session slug is deliberately absent here, as after a
+// restart), and the notification must carry that path.
+{
+	const prevAgentDir = process.env.PI_CODING_AGENT_DIR;
+	const workRoot = mkdtempSync(path.join(tmpdir(), "moa-verify-exhaust-cwd-"));
+	const agentDir = mkdtempSync(path.join(tmpdir(), "moa-verify-exhaust-agent-"));
+	mkdirSync(path.join(agentDir, "mf-plan"), { recursive: true });
+	process.env.PI_CODING_AGENT_DIR = agentDir;
+	writeFileSync(
+		path.join(agentDir, "mf-plan", "settings.json"),
+		JSON.stringify({ maxVerificationRepairs: 0 }),
+		"utf8",
+	);
+
+	try {
+		const SLUG = "exhausted-repair-example";
+		const criteriaMarkdown = "## Verification Criteria\n- **C1:** Widget exists — src/a.ts\n- **C2:** Widget wired — src/b.ts";
+		mkdirSync(path.join(workRoot, ".pi", "mf-plan"), { recursive: true });
+		writeFileSync(path.join(workRoot, ".pi", "mf-plan", `${SLUG}__criteria.md`), criteriaMarkdown, "utf8");
+
+		const notifications = [];
+		let selectCalls = 0;
+		const ctx = {
+			cwd: workRoot,
+			hasUI: true,
+			mode: "tui",
+			modelRegistry: { getRegisteredProviderIds: () => [], find: () => undefined },
+			ui: {
+				notify: (message) => notifications.push(message),
+				select: async () => { selectCalls++; return "Accept implementation as-is"; },
+			},
+		};
+		const host = {
+			getActiveProgressWidget: () => undefined,
+			// No session slug: only the handoff knows where the plan was saved.
+			getPlanRepoSlug: () => undefined,
+			setImplementationHandoff: () => {},
+			setActiveCancelSession: () => {},
+			stopActiveProgressWidget: () => {},
+			markImplementationPending: () => {},
+			noteRunError: () => {},
+			pi: { sendUserMessage: async () => {} },
+		};
+
+		const verdict = `## Criteria Verdicts
+- **C1:** pass — src/a.ts:4
+- **C2:** fail — src/b.ts never calls it
+
+## Verification Result
+**Verdict:** partial
+**Summary:** The widget exists but is not wired up.`;
+		let call = 0;
+		const runSingleAgent = async () => {
+			call++;
+			return {
+				cancelled: false, exitCode: 0, stopReason: "stop", errorMessage: undefined, stderr: undefined,
+				messages: [{ role: "assistant", content: [{ type: "text", text: call === 1 ? "ok" : verdict }] }],
+			};
+		};
+
+		await runImplementationVerification(ctx, host, {
+			plan: "# Plan\n\n1. Add the widget.\n2. Wire the widget.",
+			planFilePath: path.join(workRoot, ".pi", "mf-plan", `${SLUG}__plan.md`),
+			repoPlanSlug: SLUG,
+			model: { provider: "test", id: "impl-model" },
+			verifier: { provider: "test", id: "verifier-model" },
+			verifierThinking: "low",
+			verificationCriteria: criteriaMarkdown,
+			verificationRepairs: 0,
+			timestamp: 1,
+		}, "Implemented.", { runSingleAgent });
+
+		assert.equal(selectCalls, 0, "a zero repair budget must not open the repair/accept dialog");
+
+		const handoffFile = path.join(workRoot, ".pi", "mf-plan", `${SLUG}__verification-handoff.md`);
+		const written = readFileSync(handoffFile, "utf8");
+		assert.match(written, /## Criteria status/);
+		assert.match(written, /\*\*C1:\*\* pass/);
+		assert.match(written, /\*\*C2:\*\* fail/);
+		assert.match(written, /## Full verification criteria/);
+		assert.match(written, /Widget wired — src\/b\.ts/);
+		assert.match(written, /Frozen verification criteria: \.pi\/mf-plan\/exhausted-repair-example__criteria\.md/);
+		assert.match(written, /disabled in settings/);
+
+		const exhaustion = notifications.at(-1);
+		assert.match(exhaustion, /Continue fix\/verification using the handoff file:/);
+		assert.match(exhaustion, /\.pi\/mf-plan\/exhausted-repair-example__verification-handoff\.md/);
 	} finally {
 		if (prevAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
 		else process.env.PI_CODING_AGENT_DIR = prevAgentDir;

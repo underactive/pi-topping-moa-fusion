@@ -18,7 +18,9 @@ import {
 	defaultThinkingForModel,
 	loadMoaConfig,
 	MAX_CONCURRENT_AGENTS,
+	MAX_VERIFICATION_REPAIRS_LIMIT,
 	MIN_CONCURRENT_AGENTS,
+	MIN_VERIFICATION_REPAIRS,
 	saveMoaConfig,
 	type MoaConfig,
 } from "../config/settings.ts";
@@ -76,6 +78,7 @@ interface SetupDraft {
 	autoResolveConflicts: boolean;
 	useSummaryName: boolean;
 	maxConcurrentAgents: number;
+	maxVerificationRepairs: number;
 	rosters: PlanRoster[];
 }
 
@@ -90,6 +93,7 @@ class MoaSetupComponent implements Component {
 	private autoResolveConflicts: boolean;
 	private useSummaryName: boolean;
 	private maxConcurrentAgents: number;
+	private maxVerificationRepairs: number;
 
 	constructor(
 		private readonly tui: TUI,
@@ -106,6 +110,7 @@ class MoaSetupComponent implements Component {
 		this.autoResolveConflicts = draft.autoResolveConflicts;
 		this.useSummaryName = draft.useSummaryName;
 		this.maxConcurrentAgents = draft.maxConcurrentAgents;
+		this.maxVerificationRepairs = draft.maxVerificationRepairs;
 		const slotItem = (slotIndex: number): MenuItem => ({
 			id: `role-${slotIndex}`,
 			label: SLOTS[slotIndex]!.menuLabel,
@@ -141,6 +146,17 @@ class MoaSetupComponent implements Component {
 						valueIndex: this.maxConcurrentAgents - MIN_CONCURRENT_AGENTS,
 						description: "Child agents running at once in MoA, opinion, debate and plan subagent fan-outs. Keep at 1 for local agents.",
 						onChange: (valueIndex: number) => { this.maxConcurrentAgents = MIN_CONCURRENT_AGENTS + valueIndex; },
+					},
+					{
+						id: "max-verification-repairs",
+						label: "max verification repairs",
+						values: Array.from(
+							{ length: MAX_VERIFICATION_REPAIRS_LIMIT - MIN_VERIFICATION_REPAIRS + 1 },
+							(_unused, index) => String(MIN_VERIFICATION_REPAIRS + index),
+						),
+						valueIndex: this.maxVerificationRepairs - MIN_VERIFICATION_REPAIRS,
+						description: "Verifier-driven repair rounds after implementation (0 disables automatic repairs).",
+						onChange: (valueIndex: number) => { this.maxVerificationRepairs = MIN_VERIFICATION_REPAIRS + valueIndex; },
 					},
 				] },
 			],
@@ -181,6 +197,7 @@ class MoaSetupComponent implements Component {
 			autoResolveConflicts: this.autoResolveConflicts,
 			useSummaryName: this.useSummaryName,
 			maxConcurrentAgents: this.maxConcurrentAgents,
+			maxVerificationRepairs: this.maxVerificationRepairs,
 			rosters: [...this.draft.rosters],
 		};
 	}
@@ -313,6 +330,7 @@ export async function showMoaSetup(
 		autoResolveConflicts: saved.autoResolveConflicts,
 		useSummaryName: saved.useSummaryName,
 		maxConcurrentAgents: saved.maxConcurrentAgents,
+		maxVerificationRepairs: saved.maxVerificationRepairs,
 		rosters: [...saved.rosters],
 	};
 
@@ -342,6 +360,7 @@ export async function showMoaSetup(
 			draft.autoResolveConflicts = result.draft.autoResolveConflicts;
 			draft.useSummaryName = result.draft.useSummaryName;
 			draft.maxConcurrentAgents = result.draft.maxConcurrentAgents;
+			draft.maxVerificationRepairs = result.draft.maxVerificationRepairs;
 			draft.rosters = await showRosterManager(ctx, draft.rosters, { currentThinking });
 			continue;
 		}
@@ -378,6 +397,7 @@ export async function showMoaSetup(
 		autoResolveConflicts: finalDraft.autoResolveConflicts,
 		useSummaryName: finalDraft.useSummaryName,
 		maxConcurrentAgents: finalDraft.maxConcurrentAgents,
+		maxVerificationRepairs: finalDraft.maxVerificationRepairs,
 		cheap: finalDraft.selections[AGENT_SLOT_COUNT],
 		rosters: finalDraft.rosters,
 		thinkingOverrides: { ...current.thinkingOverrides, ...finalDraft.thinkingOverrides },

@@ -24,6 +24,7 @@ try {
 	assert.equal(empty.autoResolveConflicts, false);
 	assert.equal(empty.agentDefaultsConfigured, false);
 	assert.equal(empty.maxConcurrentAgents, 1);
+	assert.equal(empty.maxVerificationRepairs, 2);
 	// A config (or file) lacking `verifier` loads it as undefined — no migration.
 	assert.equal(empty.verifier, undefined);
 	// A file without rosters loads an empty list.
@@ -52,6 +53,7 @@ try {
 		thinkingOverrides: { "test/cheap": "minimal", "test/deep": "max" },
 		rosters: [],
 		maxConcurrentAgents: 4,
+		maxVerificationRepairs: 3,
 	};
 	config.saveMoaConfig(saved);
 	assert.equal(config.moaSettingsExist(), true);
@@ -62,6 +64,25 @@ try {
 	assert.deepEqual(reloaded.verifier, verifier);
 	assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")).cheap, cheap);
 	assert.equal(reloaded.maxConcurrentAgents, 4);
+	assert.equal(reloaded.maxVerificationRepairs, 3);
+
+	// Out-of-range maxVerificationRepairs values clamp into 0–5.
+	const repairsClamped = JSON.parse(readFileSync(settingsPath, "utf8"));
+	repairsClamped.maxVerificationRepairs = -1;
+	writeFileSync(settingsPath, `${JSON.stringify(repairsClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxVerificationRepairs, 0);
+	repairsClamped.maxVerificationRepairs = 9;
+	writeFileSync(settingsPath, `${JSON.stringify(repairsClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxVerificationRepairs, 5);
+	repairsClamped.maxVerificationRepairs = 2.6;
+	writeFileSync(settingsPath, `${JSON.stringify(repairsClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxVerificationRepairs, 3);
+	repairsClamped.maxVerificationRepairs = "two";
+	writeFileSync(settingsPath, `${JSON.stringify(repairsClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxVerificationRepairs, 2);
+	delete repairsClamped.maxVerificationRepairs;
+	writeFileSync(settingsPath, `${JSON.stringify(repairsClamped, null, "\t")}\n`, "utf8");
+	assert.equal(config.loadMoaConfig().maxVerificationRepairs, 2);
 
 	// Out-of-range maxConcurrentAgents values clamp into 1–8.
 	const concurrencyClamped = JSON.parse(readFileSync(settingsPath, "utf8"));

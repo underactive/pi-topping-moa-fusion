@@ -136,7 +136,7 @@ export function fallbackPlanName(): string {
 	return generateWordSlug();
 }
 
-export type RepoPlanFileKind = "plan-prompt" | "plan" | "verification" | "criteria";
+export type RepoPlanFileKind = "plan-prompt" | "plan" | "verification" | "criteria" | "verification-handoff";
 
 function repoPlanSuffix(kind: RepoPlanFileKind): string {
 	// `__verification` and `__criteria` never collide with the `/mf-plan-implement`
@@ -144,6 +144,7 @@ function repoPlanSuffix(kind: RepoPlanFileKind): string {
 	if (kind === "plan-prompt") return "__plan-prompt";
 	if (kind === "verification") return "__verification";
 	if (kind === "criteria") return "__criteria";
+	if (kind === "verification-handoff") return "__verification-handoff";
 	return "__plan";
 }
 

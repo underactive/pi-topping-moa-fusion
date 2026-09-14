@@ -25,6 +25,20 @@ export const MIN_CONCURRENT_AGENTS = 1;
 export const MAX_CONCURRENT_AGENTS = 8;
 export const DEFAULT_MAX_CONCURRENT_AGENTS = MIN_CONCURRENT_AGENTS;
 
+export const MIN_VERIFICATION_REPAIRS = 0;
+export const MAX_VERIFICATION_REPAIRS_LIMIT = 5;
+export const DEFAULT_MAX_VERIFICATION_REPAIRS = 2;
+
+/**
+ * Sanitize verifier-driven repair rounds: missing or malformed values fall back
+ * to the default; finite numbers are rounded and clamped into [0, 5]. Zero
+ * disables automatic repair offers after verification gaps.
+ */
+export function normalizeMaxVerificationRepairs(value: unknown): number {
+	if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_MAX_VERIFICATION_REPAIRS;
+	return Math.min(MAX_VERIFICATION_REPAIRS_LIMIT, Math.max(MIN_VERIFICATION_REPAIRS, Math.round(value)));
+}
+
 /**
  * The one place a loaded/passed concurrency value becomes safe: missing,
  * non-numeric, NaN and infinite values fall back to the default; finite
@@ -45,6 +59,8 @@ export interface MoaConfig {
 	debateRounds: number;
 	/** Child agents allowed to run at once in any fan-out, clamped to 1–8. Defaults to 1 — parallel local agents are unusably slow. */
 	maxConcurrentAgents: number;
+	/** Verifier-driven repair rounds after implementation, clamped to 0–5. Defaults to 2; 0 disables automatic repairs. */
+	maxVerificationRepairs: number;
 	synthesizer?: ModelRef;
 	implementer?: ModelRef;
 	verifier?: ModelRef;
@@ -74,6 +90,7 @@ function emptyConfig(): MoaConfig {
 		debateModels: [],
 		debateRounds: 3,
 		maxConcurrentAgents: DEFAULT_MAX_CONCURRENT_AGENTS,
+		maxVerificationRepairs: DEFAULT_MAX_VERIFICATION_REPAIRS,
 		synthesizer: undefined,
 		implementer: undefined,
 		verifier: undefined,
@@ -108,6 +125,7 @@ function parseSettingsFile(path: string): MoaConfig {
 			? Math.min(5, Math.max(2, Math.round(parsed.debateRounds)))
 			: 3;
 		const maxConcurrentAgents = normalizeMaxConcurrentAgents(parsed.maxConcurrentAgents);
+		const maxVerificationRepairs = normalizeMaxVerificationRepairs(parsed.maxVerificationRepairs);
 		const synthesizer = isModelRef(parsed.synthesizer) ? parsed.synthesizer : undefined;
 		const implementer = isModelRef(parsed.implementer) ? parsed.implementer : undefined;
 		const verifier = isModelRef(parsed.verifier) ? parsed.verifier : undefined;
@@ -132,7 +150,7 @@ function parseSettingsFile(path: string): MoaConfig {
 		const agentDefaultsConfigured = parsed.agentDefaultsConfigured === true;
 		const rosters = parseRosters(parsed.rosters);
 
-		return { mode, proposers, opinionModels, debateModels, debateRounds, maxConcurrentAgents, synthesizer, implementer, verifier, cheap, thinkingOverrides, rosters, autoResolveConflicts, useSummaryName, agentDefaultsConfigured };
+		return { mode, proposers, opinionModels, debateModels, debateRounds, maxConcurrentAgents, maxVerificationRepairs, synthesizer, implementer, verifier, cheap, thinkingOverrides, rosters, autoResolveConflicts, useSummaryName, agentDefaultsConfigured };
 	} catch (err) {
 		console.error("mf-plan: failed to parse settings, using defaults:", err);
 		return emptyConfig();

@@ -11,11 +11,17 @@
  * evidence — the implementer's own report is treated as an untrusted claim.
  *
  * A `complete` verdict with a clean script gate ends the phase. Anything less
- * offers the user a bounded repair round (up to MAX_VERIFICATION_REPAIRS): the
- * verifier's gaps and failing checks are shown inline in the repair/accept
- * dialog and sent back to the same in-session implementer via the existing
- * kickoff machinery. The result is then verified again. "Accept implementation
- * as-is" is always available.
+ * offers the user a bounded repair round (up to the `maxVerificationRepairs`
+ * setting, default 2; 0 disables the offer): the verifier's gaps and failing
+ * checks are shown inline in the repair/accept dialog and sent back to the same
+ * in-session implementer via the existing kickoff machinery. The result is then
+ * verified again. "Accept implementation as-is" is always available.
+ *
+ * Once that budget is spent (or when it is zero, or no UI can offer the choice),
+ * the phase writes a `<slug>__verification-handoff.md` next to the plan holding
+ * every criterion's status plus the whole frozen checklist, and names that file
+ * in the exhaustion notification so the fix/verification loop can be continued
+ * by hand.
  */
 
 import { CONFIG_DIR_NAME, type ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -41,9 +47,6 @@ import { modelExtensionOptions, resolveContextWindow, resolveModelCost } from ".
 import { parseVerificationCriteria, sectionBullets, type VerificationCriterion } from "./verificationCriteria.ts";
 import type { MoaRunHost } from "./runContext.ts";
 import { captureImplementationDiff, discoverVerifyScripts, runVerifyScript, type VerifyResult } from "./verifyGate.ts";
-
-/** How many verifier-driven repair rounds a single implementation may consume. */
-export const MAX_VERIFICATION_REPAIRS = 2;
 
 export type VerificationVerdictValue = "complete" | "partial" | "incomplete" | "cannot-verify";
 
@@ -347,6 +350,58 @@ export function formatVerificationReport(parsed: VerificationVerdict, failedScri
 		sections.push(`Failing project checks:\n${checks.join("\n")}`);
 	}
 	return sections.join("\n\n");
+}
+
+/** Markdown handoff written when automatic verifier repairs are exhausted or disabled. */
+export function buildVerificationExhaustionHandoff(input: {
+	repairsUsed: number;
+	maxRepairs: number;
+	parsed: VerificationVerdict;
+	criteria: VerificationCriterion[];
+	failedScripts: VerifyResult[];
+	planFilePath: string;
+	verificationReportPath?: string;
+	/** Frozen checklist on disk, referenced alongside the inlined criteria. */
+	criteriaFilePath?: string;
+}): string {
+	const { repairsUsed, maxRepairs, parsed, criteria, failedScripts, planFilePath, verificationReportPath, criteriaFilePath } = input;
+	const sections: string[] = [
+		"# Verification repair handoff",
+		"",
+		maxRepairs === 0
+			? "Automatic verifier repair rounds are disabled in settings (`maxVerificationRepairs: 0`)."
+			: `Verifier repair rounds are exhausted (${repairsUsed} of ${maxRepairs} used).`,
+		"",
+		"Use this file to continue the fix/verification loop manually: send the criteria status and gaps below to the implementer, apply fixes, then re-run verification (for example via `/mf-plan-implement` or by approving a follow-up turn).",
+		"",
+		`Approved plan: ${planFilePath}`,
+	];
+	if (verificationReportPath) sections.push(`Full verifier report: ${verificationReportPath}`);
+	if (criteriaFilePath) sections.push(`Frozen verification criteria: ${criteriaFilePath}`);
+	sections.push(
+		"",
+		"## Verification result",
+		`**Verdict:** ${parsed.verdict ?? "unknown"}`,
+		parsed.summary ? `**Summary:** ${parsed.summary}` : "**Summary:** (none)",
+	);
+	if (criteria.length > 0) {
+		const byId = new Map(parsed.criteria.map((criterion) => [criterion.id, criterion]));
+		const statusLines = criteria.map((criterion) => {
+			const verdict = byId.get(criterion.id);
+			if (!verdict) return `- **${criterion.id}:** not judged — ${criterion.text}`;
+			return `- **${criterion.id}:** ${verdict.status} — ${verdict.evidence || criterion.text}`;
+		});
+		sections.push("", "## Criteria status", ...statusLines, "", "## Full verification criteria", ...criteria.map((criterion) => `- **${criterion.id}:** ${criterion.text}`));
+	} else if (parsed.steps.length > 0) {
+		sections.push("", "## Step verdicts", ...parsed.steps.map((step) => `- ${step}`));
+	}
+	if (parsed.gaps.length > 0) {
+		sections.push("", "## Gaps", ...parsed.gaps.map((gap) => `- ${gap}`));
+	}
+	if (failedScripts.length > 0) {
+		sections.push("", "## Failing project checks", ...failedScripts.map((result) => `- \`${result.command}\` failed (exit ${result.exitCode})`));
+	}
+	return sections.join("\n");
 }
 
 function buildRepairNote(parsed: VerificationVerdict, failedScripts: VerifyResult[]): string {
@@ -764,7 +819,8 @@ export async function runImplementationVerification(
 	}
 
 	const repairsUsed = activeHandoff.verificationRepairs ?? 0;
-	if (ctx.hasUI && repairsUsed < MAX_VERIFICATION_REPAIRS) {
+	const maxRepairs = config.maxVerificationRepairs;
+	if (ctx.hasUI && maxRepairs > 0 && repairsUsed < maxRepairs) {
 		await runVerificationDecision({
 			ctx,
 			host,
@@ -785,7 +841,47 @@ export async function runImplementationVerification(
 
 	const summary = buildVerificationSummary(parsed, scriptResults).join("\n");
 	const report = formatVerificationReport(parsed, failedScripts);
-	const exhaustedNote = repairsUsed >= MAX_VERIFICATION_REPAIRS ? "\n\nRepair rounds are exhausted." : "";
-	ctx.ui.notify(`${summary}\n\n${report}${exhaustedNote}`, "warning");
+	let handoffPath: string | undefined;
+	// The run's own slug is authoritative, but a resumed implementation may have
+	// verified without one (e.g. /mf-plan-implement after a restart); the handoff
+	// carries the slug its plan was saved under, so fall back to it.
+	const repoPlanSlug = host.getPlanRepoSlug() ?? activeHandoff.repoPlanSlug;
+	if (repoPlanSlug) {
+		try {
+			saveRepoPlanFile(
+				buildVerificationExhaustionHandoff({
+					repairsUsed,
+					maxRepairs,
+					parsed,
+					criteria,
+					failedScripts,
+					planFilePath: activeHandoff.planFilePath,
+					verificationReportPath,
+					// Only point at the checklist file when one is actually on disk;
+					// criteria can come from the handoff alone.
+					criteriaFilePath: readRepoPlanFile(ctx.cwd, repoPlanSlug, "criteria")
+						? `${CONFIG_DIR_NAME}/mf-plan/${repoPlanSlug}__criteria.md`
+						: undefined,
+				}),
+				ctx.cwd,
+				repoPlanSlug,
+				"verification-handoff",
+			);
+			handoffPath = `${CONFIG_DIR_NAME}/mf-plan/${repoPlanSlug}__verification-handoff.md`;
+		} catch {
+			// Persisting the handoff is best-effort; the exhaustion notification still fires.
+		}
+	}
+	// The notification is the only place the handoff is announced, so say plainly
+	// when it could not be written rather than silently dropping the location.
+	const handoffNote = handoffPath
+		? `\n\nContinue fix/verification using the handoff file:\n${handoffPath}`
+		: "\n\nThe verification handoff file could not be saved — the findings above are the only record.";
+	const exhaustedNote = maxRepairs === 0
+		? "\n\nAutomatic verifier repair rounds are disabled in settings."
+		: repairsUsed >= maxRepairs
+			? "\n\nRepair rounds are exhausted."
+			: "";
+	ctx.ui.notify(`${summary}\n\n${report}${exhaustedNote}${handoffNote}`, "warning");
 	finish("done");
 }
