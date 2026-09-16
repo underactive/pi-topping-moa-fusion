@@ -27,7 +27,7 @@ export function buildContextSubsectionsContract(): string {
 		...CONTEXT_SUBSECTION_HEADINGS.map((heading) => `- \`### ${heading}\``),
 		"",
 		"- `### Evaluation dimensions` — reason separately about correctness, completeness, feasibility & effort, risk, and simplicity; never collapse them into one impression.",
-		"- `### Proposer alignment` — where proposers unanimously agreed, what they unanimously rejected, and where they differed, with shared assumptions sanity-checked.",
+		"- `### Proposer alignment` — where proposers unanimously agreed, what they unanimously rejected, and where they differed; tag every unanimous point as evidence-backed (two or more proposers cite a concrete repo location) or asserted (no citation, or all citations identical and unverified); sanity-check every asserted point against the repo with read/grep/find/ls before relying on it, stating what you checked and what you found; note when a unanimous point rests inside a single same-model cluster from the Panel dependence note; treat each same-model cluster as one vote.",
 		"- `### Synthesis decisions` — what you recombined, added, or dropped, and one-line decisions for each disagreement using blinded slot labels.",
 		"",
 		"All MoA reconciliation commentary belongs inside `## Context` — nowhere else. A plan missing any of these three subsections will be rejected and sent back to you. They are required in every full-plan output, including revisions after conflict resolutions or user feedback.",

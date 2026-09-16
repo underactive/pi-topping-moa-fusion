@@ -44,6 +44,7 @@ import {
 import { PLAN_OVERLAY_OPTIONS } from "./menu.ts";
 import { TwoPaneModelThinking } from "./twoPaneModelThinking.ts";
 import { smartTruncateModelLabel } from "./modelLabel.ts";
+import { proposerDiversityWarning } from "../moa/panelDependence.ts";
 import { getModelCatalogue } from "../config/modelCatalogue.ts";
 import {
 	loadMoaConfig,
@@ -242,6 +243,11 @@ class MoaModelPickerComponent implements Component {
 	/** Count of proposer slots holding an explicit assignment. */
 	private assignedProposerCount(): number {
 		return this.proposerRefs.reduce((n, ref) => (ref ? n + 1 : n), 0);
+	}
+
+	private diversityWarning(): string | undefined {
+		const assigned = this.proposerRefs.filter((ref): ref is ModelRef => ref !== undefined);
+		return proposerDiversityWarning(assigned);
 	}
 
 	/**
@@ -587,7 +593,11 @@ class MoaModelPickerComponent implements Component {
 				slotRow("Verifier", detail("Verifier", this.verifierRef, this.verifierThinking), VERIFIER_ROW),
 				startRow,
 			];
-			const reviewRows = [loadRow, row(""), ...slotRows.slice(1, -1), row(""), startRow];
+			const warning = this.diversityWarning();
+			const warningRows = warning
+				? wrapWords(warning, bodyWidth - 1).map((line) => row(th.fg("dim", line)))
+				: [];
+			const reviewRows = [loadRow, row(""), ...slotRows.slice(1, -1), row(""), ...warningRows, startRow];
 			const lines = [
 				topBorder,
 				row(th.fg("accent", "MoA Fusion Pre-flight")),

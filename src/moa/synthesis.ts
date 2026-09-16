@@ -18,6 +18,7 @@ import { buildContextRetryHeader, buildContextSubsectionsContract, missingContex
 import { modelExtensionOptions, resolveContextWindow, resolveModelCost } from "./modelRuntime.ts";
 import { runCriteriaGeneration } from "./verificationCriteria.ts";
 import type { MoaRunContext, ReviewLoopOptions, SucceededProposal } from "./runContext.ts";
+import { buildPanelDependenceNote } from "./panelDependence.ts";
 import { buildVerdictContract, buildVerdictRetryHeader, missingVerdictSlots, parseProposerVerdicts, stripSynthSections } from "./verdicts.ts";
 
 export interface SynthesisPhaseOptions {
@@ -71,7 +72,10 @@ export async function runSynthesisPhase(
 	// reason: a bridged synthesizer that loses the agent prompt never learns
 	// the ## Conflicts markup and silently resolves every disagreement solo.
 	const fedLabels = succeeded.map(({ originalIndex }) => proposerBlindedLabel(originalIndex));
-	const baseSynthTask = `${SYNTHESIZER_TASK_PREAMBLE}\n\nOriginal user request:\n${prompt}\n\n---\n\nIndependent proposer plans:\n\n${proposals}\n\n---\n\n${buildVerdictContract(fedLabels)}\n\n---\n\n${buildContextSubsectionsContract()}\n\n---\n\n${buildConflictContract(fedLabels)}`;
+	// Correlated-judge guard: the note exposes dependence structure (counts and
+	// same-model clusters) without unblinding — only slot numbers and integers.
+	const dependenceNote = buildPanelDependenceNote(succeeded);
+	const baseSynthTask = `${SYNTHESIZER_TASK_PREAMBLE}\n\nOriginal user request:\n${prompt}\n\n---\n\n${dependenceNote}\n\nIndependent proposer plans:\n\n${proposals}\n\n---\n\n${buildVerdictContract(fedLabels)}\n\n---\n\n${buildContextSubsectionsContract()}\n\n---\n\n${buildConflictContract(fedLabels)}`;
 	const rebuildSynthTask = () => {
 		synthTask = [baseSynthTask, ...runContext.synthConversation.slice(-2)].join("\n\n---\n\n");
 	};

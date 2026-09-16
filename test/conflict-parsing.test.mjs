@@ -50,6 +50,26 @@ const { parseConflicts } = await import("../src/moa/conflicts.ts");
 	assert.match(remainingPlan, /1\. Step one\./);
 }
 
+// ── Support-count suffix on Details round-trips ─────────────────────────────
+{
+	const plan = [
+		"## Plan",
+		"1. Step.",
+		"",
+		"## Conflicts",
+		"",
+		"### Conflict: Auth storage",
+		"- **Decision:** Choose storage.",
+		"- **Recommended:** Keep cookies",
+		"- **Details:** Use HttpOnly cookies for sessions; backed by 2 of 3 proposals (2 distinct models).",
+	].join("\n");
+	const { conflicts } = parseConflicts(plan);
+	assert.equal(
+		conflicts[0].options[0].description,
+		"Use HttpOnly cookies for sessions; backed by 2 of 3 proposals (2 distinct models).",
+	);
+}
+
 // ── Multiple conflicts in one section ───────────────────────────────────────
 {
 	const plan = [

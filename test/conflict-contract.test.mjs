@@ -67,8 +67,12 @@ assert.equal(parsed.options[0].label, "Keep the current sign-in experience (Reco
 assert.equal(parsed.options[0].recommended, true);
 assert.equal(
 	parsed.options[0].description,
-	"Store session IDs in `Secure`, `HttpOnly` cookies so the existing middleware stays compatible and page scripts cannot read them.",
+	"Store session IDs in `Secure`, `HttpOnly` cookies so the existing middleware stays compatible and page scripts cannot read them; backed by 2 of 3 proposals (2 distinct models).",
 	"Details line becomes the recommended option's description",
+);
+assert.ok(
+	contract.includes("backed by K of N proposals (M distinct models)"),
+	"contract states the support-count rule",
 );
 assert.equal(parsed.options[1].proposerLabel, "Proposer 2");
 assert.equal(parsed.options[1].label, "Make sign-in data available to browser code");

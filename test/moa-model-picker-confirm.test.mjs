@@ -333,6 +333,75 @@ try {
 	assert.deepEqual(sparse.verifier, { provider: "anthropic", id: "claude-opus-4-6" });
 
 	// ---------------------------------------------------------------------
+	// Journey 3c: diversity warning renders for duplicate models and same-
+	// provider rosters, but Start remains enabled and finishes the picker.
+	// ---------------------------------------------------------------------
+	const hasWarningTail = (rendered) =>
+		rendered.includes("not independent") && rendered.includes("evidence");
+	const hasDuplicateWarning = (rendered) =>
+		rendered.includes("proposer slots share a model") && hasWarningTail(rendered);
+	const hasProviderWarning = (rendered) =>
+		rendered.includes("share one provider") && hasWarningTail(rendered);
+
+	await showMoaModelPicker(makePickerCtx((component, done) => {
+		const { text, rowFor } = makeViews(component);
+		component.handleInput(ENTER);
+		const nav = overview(component);
+		nav.assign(ROW.P1);
+		nav.assign(ROW.P2);
+		assert.ok(hasDuplicateWarning(text()), "duplicate-model warning renders once two slots share a model");
+		nav.assign(ROW.SYNTH);
+		nav.assign(ROW.IMPL);
+		nav.assign(ROW.VERIF);
+		assert.doesNotMatch(rowFor("Start fan-out"), /needs /, "Start must not report missing slots");
+		nav.start();
+		done(undefined);
+	}), "medium").then((duplicateResult) => {
+		assert.equal(duplicateResult.mode, "moa", "duplicate-model warning must not block Start");
+	});
+
+	await showMoaModelPicker(makePickerCtx((component, done) => {
+		const { text, rowFor } = makeViews(component);
+		component.handleInput(ENTER);
+		const nav = overview(component);
+		nav.assign(ROW.P1, "opus");
+		nav.assign(ROW.P2, "haiku");
+		assert.match(rowFor("Proposer 1"), /anthropic\/claude-opus-4-6/);
+		assert.match(rowFor("Proposer 2"), /anthropic\/claude-haiku-4-5/);
+		assert.ok(hasProviderWarning(text()), "same-provider warning renders for distinct models on one provider");
+		done(undefined);
+	}), "medium");
+
+	{
+		const diverseModels = [
+			...models,
+			{ provider: "openai", id: "gpt-5", reasoning: true },
+		];
+		await showMoaModelPicker({
+			...makePickerCtx((component, done) => {
+				const { text } = makeViews(component);
+				component.handleInput(ENTER);
+				const nav = overview(component);
+				nav.assign(ROW.P1, "opus");
+				nav.assign(ROW.P2, "gpt");
+				nav.assign(ROW.SYNTH, "opus");
+				nav.assign(ROW.IMPL, "gpt");
+				nav.assign(ROW.VERIF, "opus");
+				assert.ok(!hasDuplicateWarning(text()), "distinct proposer models suppress the duplicate warning");
+				assert.ok(!hasProviderWarning(text()), "distinct proposer models on two providers suppress both warnings");
+				done(undefined);
+			}, "medium"),
+			model: diverseModels[1],
+			modelRegistry: {
+				getAll: () => diverseModels,
+				getAvailable: () => diverseModels,
+				find: () => undefined,
+				getRegisteredProviderIds: () => [],
+			},
+		}, "medium");
+	}
+
+	// ---------------------------------------------------------------------
 	// Journey 4: saved configuration only seeds highlights — the overview still
 	// opens with every slot `(none)`, and Start stays disabled until confirmed.
 	// ---------------------------------------------------------------------

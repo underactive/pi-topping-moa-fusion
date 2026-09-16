@@ -52,6 +52,14 @@ assert.ok(contract.includes("`## Context`"), "contract pins placement under ## C
 assert.ok(contract.includes("rejected and sent back"), "contract states the enforcement consequence");
 assert.ok(contract.includes("including revisions after conflict resolutions or user feedback"), "contract covers revision rounds");
 assert.ok(contract.includes("never collapse them into one impression"), "contract keeps the dimension-separation rule");
+assert.ok(contract.includes("evidence-backed"), "contract alignment bullet names evidence-backed");
+assert.ok(contract.includes("asserted"), "contract alignment bullet names asserted");
+
+const taggedAlignment = fullContext.replace(
+	"All proposers agreed on the storage layer.",
+	"All proposers agreed on the storage layer (evidence-backed: src/store.ts).",
+);
+assert.deepEqual(missingContextSubsections(taggedAlignment), [], "alignment body tags do not affect heading validation");
 
 // ── buildContextRetryHeader ───────────────────────────────────────────────
 const header = buildContextRetryHeader(["Proposer alignment"]);

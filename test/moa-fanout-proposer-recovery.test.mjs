@@ -49,6 +49,15 @@ assert.ok(proposersWriteAt > 0, "the slot's proposer ref is mutated in place");
 assert.ok(thinkingWriteAt > proposersWriteAt, "the slot's thinking level is mutated in place next");
 assert.ok(persistAt > thinkingWriteAt, "host.persistState() follows the in-place mutation");
 
+// Replacement-time diversity warning fires after persistState and is gated on
+// duplicateModelSlotCount so the user sees it only when the pick joins a cluster.
+assert.match(
+	fanout,
+	/host\.persistState\(\);\s*if \(duplicateModelSlotCount\(proposers, picked\.ref\) >= 2\) \{/,
+	"the diversity warning follows persistState and gates on duplicateModelSlotCount",
+);
+assert.match(fanout, /proposerDiversityWarning\(proposers\)/, "the warning uses the shared roster-wide message");
+
 // The observe row's identity is rewritten, not just its messages, so F3 shows
 // the replacement and not the cancelled agent's corpse.
 assert.match(

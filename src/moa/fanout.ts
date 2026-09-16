@@ -10,6 +10,7 @@ import { activityLoopCount } from "../ui/agentStatus.ts";
 import { showModelThinkingPicker } from "../ui/moaModelPicker.ts";
 import type { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import type { ObserveSession } from "../ui/observeOverlay.ts";
+import { duplicateModelSlotCount, proposerDiversityWarning } from "./panelDependence.ts";
 import { runWidgetFanout } from "./fanoutWiring.ts";
 import { buildProposerRetryTask, buildProposerTask, looksLikePlan } from "./planlessRetry.ts";
 import { modelExtensionOptions, resolveContextWindow } from "./modelRuntime.ts";
@@ -128,6 +129,10 @@ export async function runFanoutPhase(options: FanoutPhaseOptions): Promise<Fanou
 				proposers[index] = picked.ref;
 				proposerThinking[index] = picked.thinking;
 				host.persistState();
+				if (duplicateModelSlotCount(proposers, picked.ref) >= 2) {
+					const warning = proposerDiversityWarning(proposers);
+					if (warning) ctx.ui.notify(warning, "warning");
+				}
 				widget.replaceProposerModel(index, picked.ref, picked.thinking);
 				// Rewrite the observe row's identity, not just its messages, so F3
 				// shows the replacement and not the cancelled agent's corpse.
