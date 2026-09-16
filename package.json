@@ -1,6 +1,6 @@
 {
   "name": "@underactive/pi-topping-moa-fusion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pi extension implementing /mf-plan — Claude Code-style 5-phase plan mode with a Mixture-of-Agents proposer/synthesizer pipeline.",
   "keywords": [
     "pi-package",
