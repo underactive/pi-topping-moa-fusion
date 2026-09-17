@@ -14,7 +14,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import { installShippedAgents } from "../agents/authoritative.ts";
-import { summarizePlanPromptName } from "../config/planName.ts";
+import { planNameFallback, summarizePlanPromptName } from "../config/planName.ts";
 import { loadMoaConfig } from "../config/settings.ts";
 import {
 	type ImplementationHandoff,
@@ -37,6 +37,7 @@ import { showCancelOverlay } from "../ui/cancelOverlay.ts";
 import { UI_TICK_MS } from "../ui/chrome.ts";
 import { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import { showObserveOverlay, type ObserveSession } from "../ui/observeOverlay.ts";
+import { planNamingOverlay, withWorkingOverlay } from "../ui/workingOverlay.ts";
 import { ASK_USER_QUESTION_TOOL_NAME, createAskUserQuestionTracker, isAskUserQuestionInstalled } from "./askUserQuestion.ts";
 import { buildPlanModeExitInstructions, buildPlanModeInstructions, buildPlanModeReentryInstructions } from "./instructions.ts";
 import { latestPlanModeStateEntry, PlanModeStatePersistence } from "./modeState.ts";
@@ -356,7 +357,11 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		return lastReentryState;
 	};
 	async function saveSubmittedPlanPrompt(ctx: ExtensionContext, prompt: string): Promise<void> {
-		planRepoSlug = await summarizePlanPromptName(ctx, prompt);
+		planRepoSlug = await withWorkingOverlay(
+			ctx,
+			planNamingOverlay("plan", () => planNameFallback(prompt)),
+			(signal) => summarizePlanPromptName(ctx, prompt, { signal }),
+		);
 		persistState();
 		saveRepoPlanFile(prompt, ctx.cwd, planRepoSlug, "plan-prompt");
 	}

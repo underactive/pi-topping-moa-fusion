@@ -47,6 +47,32 @@ try {
 	assert.equal(calledModel, cheapModel, "the configured cheap model must handle naming");
 	assert.equal(requestedReasoning, undefined, "plan naming must keep reasoning disabled");
 	assert.notEqual(name, "halcyon-warm-tiger", "an empty model response must not become a random slug");
+
+	// An already-aborted signal must short-circuit to the prompt-derived slug
+	// before the provider is ever called.
+	{
+		const callsBefore = faux.state.callCount;
+		const controller = new AbortController();
+		controller.abort();
+		const abortedName = await summarizePlanPromptName(ctx, "Create standalone SVG portrait", { signal: controller.signal });
+		assert.equal(abortedName, "create-standalone-svg-portrait", "an aborted signal must fall back to the prompt-derived slug");
+		assert.equal(faux.state.callCount, callsBefore, "an already-aborted signal must skip the provider call entirely");
+	}
+
+	// A live (non-aborted) signal must not change the happy path: it is threaded
+	// through to the provider and a normal successful response is still slugified.
+	{
+		let capturedSignal;
+		faux.setResponses([(_context, options) => {
+			capturedSignal = options?.signal;
+			return fauxAssistantMessage("standalone svg portrait maker");
+		}]);
+		const controller = new AbortController();
+		const liveName = await summarizePlanPromptName(ctx, "Create standalone SVG portrait", { signal: controller.signal });
+		assert.equal(liveName, "standalone-svg-portrait-maker", "a live signal must not interfere with a normal successful response");
+		assert.equal(capturedSignal, controller.signal, "the signal must be threaded into the provider call");
+		assert.equal(capturedSignal.aborted, false);
+	}
 } finally {
 	faux?.unregister();
 	if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;

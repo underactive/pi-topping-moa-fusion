@@ -3,7 +3,7 @@ import { isKeyRelease, Key, matchesKey } from "@earendil-works/pi-tui";
 
 import { installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../agents/authoritative.ts";
 import { discoverAgents } from "../agents/discovery.ts";
-import { summarizePlanPromptName } from "../config/planName.ts";
+import { planNameFallback, summarizePlanPromptName } from "../config/planName.ts";
 import { loadMoaConfig, saveMoaConfig } from "../config/settings.ts";
 import { resolveContextWindow } from "../moa/modelRuntime.ts";
 import type { CancelSession } from "../runtime/cancelRun.ts";
@@ -13,6 +13,7 @@ import { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import type { ObserveSession } from "../ui/observeOverlay.ts";
 import { showOpinionModelPicker } from "../ui/opinionModelPicker.ts";
 import { showPromptEditor } from "../ui/promptEditor.ts";
+import { planNamingOverlay, withWorkingOverlay } from "../ui/workingOverlay.ts";
 import { runOpinionFanout } from "./opinionFanout.ts";
 import { repoOpinionDisplayPath, saveRepoOpinionFile } from "./opinionFile.ts";
 import { collectOpinionOutcomes, formatOpinionsMarkdown } from "./opinionResults.ts";
@@ -83,7 +84,11 @@ export async function runInteractiveOpinion(
 				thinkingOverrides: { ...settings.thinkingOverrides, ...thinkingSelections },
 			});
 
-			const slug = await summarizePlanPromptName(ctx, question);
+			const slug = await withWorkingOverlay(
+				ctx,
+				planNamingOverlay("opinion", () => planNameFallback(question)),
+				(signal) => summarizePlanPromptName(ctx, question, { signal }),
+			);
 			try {
 				saveRepoOpinionFile(question, ctx.cwd, slug, "opinion-prompt");
 			} catch {

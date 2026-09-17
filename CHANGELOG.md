@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- A `Naming the plan`/`Naming the opinion`/`Naming the debate` working overlay while the cheap/fast model summarizes a submitted prompt into its slug, so the TUI no longer sits unresponsive during that call. Press **Esc** to skip naming and fall back to a name derived from the prompt.
+
 ## [0.1.1]
 
 ### Added

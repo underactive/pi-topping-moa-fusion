@@ -2,7 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 
 import { installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../agents/authoritative.ts";
 import { discoverAgents } from "../agents/discovery.ts";
-import { summarizePlanPromptName } from "../config/planName.ts";
+import { planNameFallback, summarizePlanPromptName } from "../config/planName.ts";
 import { loadMoaConfig, saveMoaConfig } from "../config/settings.ts";
 import type { OpinionHost } from "../opinion/runOpinion.ts";
 import { resolveContextWindow } from "../moa/modelRuntime.ts";
@@ -13,6 +13,7 @@ import { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import type { ObserveSession } from "../ui/observeOverlay.ts";
 import { showDebateModelPicker } from "../ui/debateModelPicker.ts";
 import { showPromptEditor } from "../ui/promptEditor.ts";
+import { planNamingOverlay, withWorkingOverlay } from "../ui/workingOverlay.ts";
 import { repoDebateDisplayPath, saveRepoDebateFile } from "./debateFile.ts";
 import { runDebateRounds } from "./debateFanout.ts";
 import { collectDebateOutcomes, formatDebateMarkdown } from "./debateResults.ts";
@@ -69,7 +70,11 @@ export async function runInteractiveDebate(
 				thinkingOverrides: { ...settings.thinkingOverrides, ...thinkingSelections },
 			});
 
-			const slug = await summarizePlanPromptName(ctx, topic);
+			const slug = await withWorkingOverlay(
+				ctx,
+				planNamingOverlay("debate", () => planNameFallback(topic)),
+				(signal) => summarizePlanPromptName(ctx, topic, { signal }),
+			);
 			try {
 				saveRepoDebateFile(topic, ctx.cwd, slug, "debate-prompt");
 			} catch {

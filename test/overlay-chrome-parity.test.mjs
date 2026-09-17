@@ -18,6 +18,7 @@ const { showObserveOverlay } = await import("../src/ui/observeOverlay.ts");
 const { showConflictReview } = await import("../src/ui/conflictOverlay.ts");
 const { showPlanReview } = await import("../src/ui/planReviewOverlay.ts");
 const { showVerificationFindings } = await import("../src/ui/verificationFindingsOverlay.ts");
+const { showWorkingOverlay } = await import("../src/ui/workingOverlay.ts");
 
 initTheme(undefined, false);
 const previousColumns = process.stdout.columns;
@@ -94,6 +95,18 @@ try {
 	}, "# Verification findings\n\n- Every step landed.");
 	assertRoundedFrame(findingsComponent, "verification findings");
 	findingsComponent.dispose();
+
+	let workingComponent;
+	await showWorkingOverlay(
+		{
+			mode: "tui",
+			ui: { custom: async (factory) => { workingComponent = factory(tui, theme, {}, () => {}); } },
+		},
+		{ title: "Naming the plan", detail: "summarizing your prompt into a short plan name" },
+		{},
+	);
+	assertRoundedFrame(workingComponent, "working");
+	workingComponent.dispose();
 } finally {
 	process.stdout.columns = previousColumns;
 	process.stdout.rows = previousRows;

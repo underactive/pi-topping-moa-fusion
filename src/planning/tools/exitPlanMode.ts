@@ -1,12 +1,13 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { summarizePlanPromptName } from "../../config/planName.ts";
+import { planNameFallback, summarizePlanPromptName } from "../../config/planName.ts";
 import { buildImplementationKickoffMessage } from "../../moa/implementationRetry.ts";
 import { stripSynthSections } from "../../moa/verdicts.ts";
 import { FOLLOW_UP } from "../../shared/modelRefs.ts";
 import type { MfPlanInfo, PlanReviewDecision } from "../../moa/planInfo.ts";
 import { showPlanReview } from "../../ui/planReviewOverlay.ts";
+import { planNamingOverlay, withWorkingOverlay } from "../../ui/workingOverlay.ts";
 import { ASK_USER_QUESTION_PENDING_MESSAGE } from "../askUserQuestion.ts";
 import { getPlan, getPlanFilePath, saveRepoPlanFile, writePlan } from "../planFile.ts";
 
@@ -98,7 +99,11 @@ export function registerExitPlanModeTool(pi: ExtensionAPI, host: ExitPlanModeHos
 			}
 
 			if (!host.getPlanRepoSlug()) {
-				host.setPlanRepoSlug(await summarizePlanPromptName(ctx, plan));
+				host.setPlanRepoSlug(await withWorkingOverlay(
+					ctx,
+					planNamingOverlay("plan", () => planNameFallback(plan)),
+					(signal) => summarizePlanPromptName(ctx, plan, { signal }),
+				));
 				host.persistState();
 			}
 

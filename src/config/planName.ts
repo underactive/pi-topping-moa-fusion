@@ -18,10 +18,19 @@ function buildSummarizePrompt(prompt: string): string {
 	].join("\n");
 }
 
+/** The name used when summarization is skipped, unavailable, or fails. */
+export function planNameFallback(prompt: string): string {
+	return trySlugifyPlanName(prompt) ?? fallbackPlanName();
+}
+
+export interface PlanNameOptions {
+	/** Caller cancellation — esc from the working overlay. */
+	signal?: AbortSignal;
+}
+
 /** Call the active model to summarize a plan prompt into a 4-word slug. */
-export async function summarizePlanPromptName(ctx: ExtensionContext, prompt: string): Promise<string> {
-	const promptSlug = trySlugifyPlanName(prompt);
-	const fallback = () => promptSlug ?? fallbackPlanName();
+export async function summarizePlanPromptName(ctx: ExtensionContext, prompt: string, options?: PlanNameOptions): Promise<string> {
+	const fallback = () => planNameFallback(prompt);
 
 	const config = loadMoaConfig();
 
@@ -33,6 +42,9 @@ export async function summarizePlanPromptName(ctx: ExtensionContext, prompt: str
 		? ctx.modelRegistry.find(cheapRef.provider, cheapRef.id) ?? ctx.model
 		: ctx.model;
 	if (!model) return fallback();
+
+	// Short-circuit before auth resolution so an already-aborted signal costs nothing.
+	if (options?.signal?.aborted) return fallback();
 
 	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
 	if (!auth?.ok || !auth.apiKey) return fallback();
@@ -57,8 +69,13 @@ export async function summarizePlanPromptName(ctx: ExtensionContext, prompt: str
 				apiKey: auth.apiKey,
 				headers: auth.headers,
 				env: auth.env,
+				signal: options?.signal,
 			},
 		);
+
+		// An aborted request can resolve with stopReason "aborted" and empty text
+		// rather than throwing — fall back explicitly instead of slugifying a stub.
+		if (response.stopReason === "aborted") return fallback();
 
 		const text = response.content
 			.filter((part): part is { type: "text"; text: string } => part.type === "text")

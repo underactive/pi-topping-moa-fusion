@@ -191,7 +191,7 @@ Both modes share the same plan-mode container. While it is active:
    - **Phase 5: Exit** — call `exit_plan_mode` for user approval
 
    This is the **single-model workflow**: the model you pick drives all five phases. [MoA](#mixture-of-agents-moa) replaces phases 1–2 with the proposer fan-out.
-3. **Per-session plan file** — one slug per session, persisted across `/resume`.
+3. **Per-session plan file** — one slug per session, persisted across `/resume`. Submitting a prompt shows a `Naming the plan` card while the cheap/fast model summarizes it into that slug; press **Esc** to skip straight to a name derived from the prompt instead of waiting.
 4. **User approval** — `exit_plan_mode` prompts to approve or keep planning. Approving restores full tool access and hands the plan back to the model.
 
 - A `● MoA Fusion (plan mode)` indicator sits in the footer while planning, and stays as `● MoA Fusion` through implementation and verification. Green: agents are working. Yellow: waiting for you (a prompt, an overlay, a questionnaire, or an idle plan-mode session). Red: a flow stopped with nothing left to try; it clears on your next turn or when you leave plan mode.
@@ -418,7 +418,8 @@ src/
     ├── promptEditor.ts         # File-path/@name completion editor
     ├── shimmer.ts
     ├── toolActivity.ts
-    └── verificationFindingsOverlay.ts
+    ├── verificationFindingsOverlay.ts
+    └── workingOverlay.ts      # Blocking-work overlay (plan/opinion/debate naming)
 
 agents/                      # Shipped agent definitions
 ├── moa-explore.md
