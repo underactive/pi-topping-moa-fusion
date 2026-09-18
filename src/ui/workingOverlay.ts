@@ -10,6 +10,7 @@
 
 import type { ExtensionContext, Theme, ThemeColor } from "@earendil-works/pi-coding-agent";
 import { isKeyRelease, Key, matchesKey, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
+import { setTimeout as sleep } from "node:timers/promises";
 import { formatElapsed } from "./agentStatus.ts";
 import { BRAILLE_SPINNER_FRAMES, ROUNDED_SINGLE_BOX, UI_TICK_MS, createFrame } from "./chrome.ts";
 import { shimmerString, type ShimmerTheme } from "./shimmer.ts";
@@ -70,10 +71,6 @@ export async function showWorkingOverlay(
 			},
 		},
 	);
-}
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 type Settled<T> = { ok: true; value: T } | { ok: false; error: unknown };
