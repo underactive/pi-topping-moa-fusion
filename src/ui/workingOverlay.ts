@@ -123,6 +123,7 @@ export async function withWorkingOverlay<T>(
 		requestWorkingOverlayClose(session);
 	});
 
+	const skip = options.skip;
 	try {
 		await showWorkingOverlay(
 			ctx,
@@ -132,9 +133,9 @@ export async function withWorkingOverlay<T>(
 				hint: options.hint,
 				// Esc skips: abort what we can, then leave the rest behind. The flow
 				// must move on even when a provider ignores the abort signal.
-				onSkip: options.skip
+				onSkip: skip
 					? () => {
-						skipped = { value: options.skip!() };
+						skipped = { value: skip() };
 						controller.abort();
 					}
 					: undefined,
