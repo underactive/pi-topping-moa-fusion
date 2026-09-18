@@ -3,7 +3,8 @@ import { isKeyRelease, Key, matchesKey } from "@earendil-works/pi-tui";
 
 import { installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../agents/authoritative.ts";
 import { discoverAgents } from "../agents/discovery.ts";
-import { planNameFallback, summarizePlanPromptName } from "../config/planName.ts";
+import { summarizePlanPromptName } from "../config/planName.ts";
+import { slugifyPlanName } from "../planning/planFile.ts";
 import { loadMoaConfig, saveMoaConfig } from "../config/settings.ts";
 import { resolveContextWindow } from "../moa/modelRuntime.ts";
 import type { CancelSession } from "../runtime/cancelRun.ts";
@@ -86,7 +87,7 @@ export async function runInteractiveOpinion(
 
 			const slug = await withWorkingOverlay(
 				ctx,
-				planNamingOverlay("opinion", () => planNameFallback(question)),
+				planNamingOverlay("opinion", () => slugifyPlanName(question)),
 				(signal) => summarizePlanPromptName(ctx, question, { signal }),
 			);
 			try {

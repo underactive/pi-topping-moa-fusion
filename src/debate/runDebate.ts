@@ -2,7 +2,8 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 
 import { installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../agents/authoritative.ts";
 import { discoverAgents } from "../agents/discovery.ts";
-import { planNameFallback, summarizePlanPromptName } from "../config/planName.ts";
+import { summarizePlanPromptName } from "../config/planName.ts";
+import { slugifyPlanName } from "../planning/planFile.ts";
 import { loadMoaConfig, saveMoaConfig } from "../config/settings.ts";
 import type { OpinionHost } from "../opinion/runOpinion.ts";
 import { resolveContextWindow } from "../moa/modelRuntime.ts";
@@ -72,7 +73,7 @@ export async function runInteractiveDebate(
 
 			const slug = await withWorkingOverlay(
 				ctx,
-				planNamingOverlay("debate", () => planNameFallback(topic)),
+				planNamingOverlay("debate", () => slugifyPlanName(topic)),
 				(signal) => summarizePlanPromptName(ctx, topic, { signal }),
 			);
 			try {

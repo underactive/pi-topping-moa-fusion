@@ -5,7 +5,7 @@
 import { completeSimple } from "@earendil-works/pi-ai/compat";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { loadMoaConfig } from "./settings.ts";
-import { fallbackPlanName, generateWordSlug, trySlugifyPlanName } from "../planning/planFile.ts";
+import { generateWordSlug, slugifyPlanName, trySlugifyPlanName } from "../planning/planFile.ts";
 
 function buildSummarizePrompt(prompt: string): string {
 	return [
@@ -18,11 +18,6 @@ function buildSummarizePrompt(prompt: string): string {
 	].join("\n");
 }
 
-/** The name used when summarization is skipped, unavailable, or fails. */
-export function planNameFallback(prompt: string): string {
-	return trySlugifyPlanName(prompt) ?? fallbackPlanName();
-}
-
 export interface PlanNameOptions {
 	/** Caller cancellation — esc from the working overlay. */
 	signal?: AbortSignal;
@@ -30,7 +25,7 @@ export interface PlanNameOptions {
 
 /** Call the active model to summarize a plan prompt into a 4-word slug. */
 export async function summarizePlanPromptName(ctx: ExtensionContext, prompt: string, options?: PlanNameOptions): Promise<string> {
-	const fallback = () => planNameFallback(prompt);
+	const fallback = () => slugifyPlanName(prompt);
 
 	const config = loadMoaConfig();
 
