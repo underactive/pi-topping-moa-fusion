@@ -1,5 +1,4 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { isKeyRelease, Key, matchesKey } from "@earendil-works/pi-tui";
 
 import { installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../agents/authoritative.ts";
 import { discoverAgents } from "../agents/discovery.ts";
@@ -7,7 +6,7 @@ import { summarizePlanPromptName } from "../config/planName.ts";
 import { slugifyPlanName } from "../planning/planFile.ts";
 import { loadMoaConfig, saveMoaConfig } from "../config/settings.ts";
 import { resolveContextWindow } from "../moa/modelRuntime.ts";
-import type { CancelSession } from "../runtime/cancelRun.ts";
+import { type CancelSession, subscribeCancelOverlayOnEsc } from "../runtime/cancelRun.ts";
 import { formatMutationWarning, MutationTripwire } from "../runtime/mutationTripwire.ts";
 import { type SendUserMessageOptions, type ThinkingLevel } from "../shared/modelRefs.ts";
 import { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
@@ -47,15 +46,7 @@ export async function runInteractiveOpinion(
 	installShippedAgents();
 	const session: CancelSession = { title: "Opinion agents", run: undefined, overlayOpen: false };
 	host.setActiveCancelSession(session);
-	const unsubscribeEsc = ctx.mode === "tui"
-		? ctx.ui.onTerminalInput((data) => {
-			if (isKeyRelease(data) || !matchesKey(data, Key.escape)) return undefined;
-			if (host.getActiveObserveSession()?.overlayOpen) return undefined;
-			if (session.overlayOpen) return undefined;
-			if (!session.run) return undefined;
-			return host.openCancelOverlayIfActive(ctx) ? { consume: true } : undefined;
-		})
-		: undefined;
+	const unsubscribeEsc = subscribeCancelOverlayOnEsc(ctx, host, session);
 
 	try {
 		let prefill = initialPrompt?.trim() ?? "";
