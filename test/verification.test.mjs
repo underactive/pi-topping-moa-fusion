@@ -616,6 +616,7 @@ try {
 		const VERIFIER = { provider: "test", id: "verifier-model" };
 		const widgetThinking = []; // [status, thinking] per switchToVerifying activation
 		const subprocessThinking = []; // thinkingOverride handed to each verifier launch
+		const notifications = [];
 
 		const widget = {
 			setActivePhase: () => {},
@@ -645,7 +646,11 @@ try {
 			mode: "print",
 			modelRegistry: { getRegisteredProviderIds: () => [], find: () => undefined },
 			ui: {
-				notify: () => {},
+				notify: (message) => notifications.push(message),
+				theme: {
+					fg: (color, text) => `<fg:${color}>${text}</fg>`,
+					bg: (color, text) => `<bg:${color}>${text}</bg>`,
+				},
 				// The failure-recovery dialog: choose the synthesizer fallback option.
 				select: async (_title, opts) => opts.find((option) => /^Retry with /.test(option)),
 			},
@@ -699,6 +704,11 @@ try {
 
 		// The row hue and the subprocess level agree on the fallback verifier.
 		assert.equal(postFallback.at(-1)[1], subprocessThinking.at(-1), "the Verify row hue matches the level actually handed to the fallback subprocess");
+		assert.match(
+			notifications.at(-1),
+			/^<bg:toolSuccessBg><fg:success>Verification passed — the implementation matches the approved plan\.<\/fg><\/bg>$/,
+			"the success notification uses the theme's success foreground and background tokens",
+		);
 	} finally {
 		if (prevAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
 		else process.env.PI_CODING_AGENT_DIR = prevAgentDir;

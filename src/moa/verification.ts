@@ -811,9 +811,10 @@ export async function runImplementationVerification(
 	const failedScripts = scriptResults.filter((r) => r.status === "fail");
 	if (verificationPassed(parsed.verdict, scriptResults)) {
 		const checksNote = scriptResults.length > 0 ? " and all project checks passed" : "";
-		ctx.ui.notify(criteria.length > 0
+		const message = criteria.length > 0
 			? `Verification passed — all ${criteria.length} criteria met${checksNote}.`
-			: `Verification passed — the implementation matches the approved plan${checksNote}.`);
+			: `Verification passed — the implementation matches the approved plan${checksNote}.`;
+		ctx.ui.notify(ctx.ui.theme.bg("toolSuccessBg", ctx.ui.theme.fg("success", message)));
 		finish("done");
 		return;
 	}
