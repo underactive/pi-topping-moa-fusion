@@ -150,7 +150,7 @@ export async function withWorkingOverlay<T>(
 	return unwrap(await settled);
 }
 
-/** Copy for the plan/opinion/debate naming wait. No trailing ellipses — see CHANGELOG 0.1.1. */
+/** Copy for the plan/opinion/debate naming wait. No trailing ellipses — see CHANGELOG 0.2.0. */
 export function planNamingOverlay(subject: "plan" | "opinion" | "debate", skip: () => string): WorkingOverlayOptions<string> {
 	return {
 		title: `Naming the ${subject}`,
