@@ -305,6 +305,8 @@ The default is **2**. Set **0** to disable automatic repair offers — verificat
 
 In the single-model flow, Phase 1 launches up to **3 moa-explore agents in parallel** and Phase 2 up to **1 mf-plan agent**. Child-agent concurrency is configurable from 1 to 8 in `/mf-plan-settings` (default **1**); it applies to MoA proposer fan-out, opinion fan-out, debate rounds, and `mf_plan_subagent` parallel mode, including every retry batch. The separate **8-task submission cap** per batch is unchanged. Per-task output is capped at 50KB.
 
+**Cache warming.** pi 0.86.0 defaults `cacheWarming` to `"streaming"`. On Anthropic models, long `mf_plan_subagent` or MoA tool executions can therefore trigger paid cache refreshes while an agent is working. Set `cacheWarming` to `"off"` in your pi config if you would rather not pay for those.
+
 ```
 mf_plan_subagent({
   tasks: [

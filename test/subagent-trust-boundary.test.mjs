@@ -25,6 +25,41 @@ if (taskArg?.includes("child-malformed-stream")) {
 	process.stdout.write(`${events.join("\n")}\n`);
 	process.exit(0);
 }
+if (taskArg?.includes("child-system-and-usage")) {
+	const events = [
+		JSON.stringify({
+			type: "message_start",
+			message: { role: "system", content: "You are pi.", sections: {}, toolsAdded: [{ name: "read" }] },
+		}),
+		JSON.stringify({
+			type: "message_end",
+			message: { role: "system", content: [{ type: "text", text: "loadout" }] },
+		}),
+		JSON.stringify({ type: "message_start", message: { role: "assistant", content: [] } }),
+		JSON.stringify({
+			type: "message_update",
+			assistantMessageEvent: { type: "text_delta", delta: "hello ", contentIndex: 0 },
+			usage: { totalTokens: 7 },
+		}),
+		JSON.stringify({
+			type: "message_update",
+			assistantMessageEvent: { type: "text_delta", delta: "world", contentIndex: 0 },
+			usage: "bogus",
+		}),
+		JSON.stringify({
+			type: "message_end",
+			message: {
+				role: "assistant",
+				content: [{ type: "text", text: "hello world" }],
+				usage: { input: 7, output: 2, cacheRead: 0, cacheWrite: 0, totalTokens: 9, cost: { total: 0 } },
+				model: "test/model",
+				stopReason: "stop",
+			},
+		}),
+	];
+	process.stdout.write(`${events.join("\n")}\n`);
+	process.exit(0);
+}
 if (taskArg?.includes("child-signal-term")) {
 	process.kill(process.pid, "SIGTERM");
 	setInterval(() => {}, 1000);
@@ -55,6 +90,12 @@ if (taskArg?.includes("child-signal-term")) {
 		parseSessionEvent('{"type":"message_end","message":{"role":"assistant","content":[],"usage":{"input":"bad"}}}')?.type,
 		"message_end",
 	);
+	assert.equal(parseSessionEvent('{"type":"message_start","message":{"role":"system","content":"You are pi.","sections":[],"toolsAdded":["read"]}}')?.type, "message_start");
+	assert.equal(parseSessionEvent('{"type":"message_end","message":{"role":"system","content":[{"type":"text","text":"loadout"}]}}')?.type, "message_end");
+	assert.equal(parseSessionEvent('{"type":"message_start","message":{"role":"system","content":[{"type":"image","data":"x","mimeType":"image/png"}]}}'), undefined);
+	// Malformed usage must not cost the run its deltas.
+	assert.equal(parseSessionEvent('{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"x","contentIndex":0},"usage":"bogus"}')?.type, "message_update");
+	assert.equal(parseSessionEvent('{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"x","contentIndex":0},"usage":{"totalTokens":"bad"}}')?.type, "message_update");
 
 	const agents = [{
 		name: "fixture",
@@ -79,6 +120,27 @@ if (taskArg?.includes("child-signal-term")) {
 	assert.equal(malformedResult.usage.cost, 0);
 	assert.equal(malformedResult.usage.toolCalls, 1);
 	assert.equal(Number.isFinite(malformedResult.usage.output), true);
+
+	const progress = [];
+	const systemAndUsageResult = await runSingleAgent(
+		process.cwd(), agents, "fixture", "child-system-and-usage", undefined, undefined, undefined,
+		undefined, undefined, {
+			onProgress: (result) => progress.push({
+				contextTokens: result.usage.contextTokens,
+				partialText: result.partialAssistant?.content
+					.filter((part) => part.type === "text")
+					.map((part) => part.text)
+					.join(""),
+			}),
+		},
+	);
+	assert.doesNotMatch(systemAndUsageResult.stderr, /event parse error/);
+	assert.equal(systemAndUsageResult.messages.length, 1, "system messages must stay out of the LLM transcript");
+	assert.equal(systemAndUsageResult.messages[0].role, "assistant");
+	assert.equal(systemAndUsageResult.messages[0].content[0].text, "hello world");
+	assert.ok(progress.some((sample) => sample.contextTokens === 7), "message_update usage must surface before message_end");
+	assert.ok(progress.some((sample) => sample.partialText === "hello world"), "bad usage must not discard its text delta");
+	assert.equal(systemAndUsageResult.usage.contextTokens, 9, "message_end usage must become authoritative");
 
 	const activity = new OutputActivityTracker();
 	activity.messageEnd({ role: "assistant", content: [], usage: { output: -10 } });

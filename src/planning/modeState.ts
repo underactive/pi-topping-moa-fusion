@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import type { MfPlanInfo } from "../moa/planInfo.ts";
 import type { ImplementationHandoff } from "../moa/implementationRetry.ts";
+import { PLAN_ONLY_REGISTERED_TOOLS } from "./tools/shared.ts";
 
 export interface PlanModeState {
 	enabled: boolean;
@@ -10,9 +11,25 @@ export interface PlanModeState {
 	needsExitReminder?: boolean;
 	moaInfo?: MfPlanInfo;
 	implementationHandoff?: ImplementationHandoff;
+	/** Active loadout captured when plan mode was entered, so exit restores it. */
+	toolsBeforePlanMode?: string[];
 }
 
 export const MAX_PERSISTED_STATE_BYTES = 512 * 1024;
+
+/**
+ * A snapshot containing plan-only tools was taken while plan mode was already
+ * live (pre-fix sessions, or a transcript-restored loadout). Restoring it would
+ * re-apply the read-only set after approval, so reject it and let the caller
+ * fall back to the registered loadout.
+ */
+export function validateToolLoadoutSnapshot(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const names = value.filter((name): name is string => typeof name === "string" && name.length > 0);
+	if (names.length === 0) return undefined;
+	if (names.some((name) => PLAN_ONLY_REGISTERED_TOOLS.includes(name))) return undefined;
+	return [...new Set(names)];
+}
 
 export function serializePlanModeState(state: PlanModeState): { state: PlanModeState; serialized: string } {
 	let persisted = state.moaInfo?.proposerPlans

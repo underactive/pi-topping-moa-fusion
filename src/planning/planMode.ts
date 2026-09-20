@@ -40,7 +40,7 @@ import { showObserveOverlay, type ObserveSession } from "../ui/observeOverlay.ts
 import { planNamingOverlay, withWorkingOverlay } from "../ui/workingOverlay.ts";
 import { ASK_USER_QUESTION_TOOL_NAME, createAskUserQuestionTracker, isAskUserQuestionInstalled } from "./askUserQuestion.ts";
 import { buildPlanModeExitInstructions, buildPlanModeInstructions, buildPlanModeReentryInstructions } from "./instructions.ts";
-import { latestPlanModeStateEntry, PlanModeStatePersistence } from "./modeState.ts";
+import { latestPlanModeStateEntry, PlanModeStatePersistence, validateToolLoadoutSnapshot } from "./modeState.ts";
 import { getPlan, getPlanSlug, isValidPlanSlug, resetPlanSlug, saveRepoPlanFile, setPlanSlug, slugifyPlanName } from "./planFile.ts";
 import { PLAN_EXIT_CONTEXT_TYPE, PLAN_MODE_CONTEXT_TYPE, PLAN_MODE_CUSTOM_TOOLS, PLAN_MODE_READ_ONLY_TOOLS, PLAN_ONLY_REGISTERED_TOOLS } from "./tools/shared.ts";
 
@@ -169,6 +169,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		needsExitReminder,
 		moaInfo: activeRunMoaInfo,
 		implementationHandoff,
+		toolsBeforePlanMode,
 	});
 	const footerState = (ctx: ExtensionContext): MoaFooterState => {
 		if (footerError) return "error";
@@ -219,6 +220,21 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		const customTools = PLAN_MODE_CUSTOM_TOOLS.filter((name) => name !== ASK_USER_QUESTION_TOOL_NAME || isAskUserQuestionInstalled(pi));
 		return [...new Set([...filtered, ...customTools])];
 	};
+	/**
+	 * Every registered tool except the plan-only ones — the safe fallback when no
+	 * trustworthy snapshot exists. Note this can restore a tool the user had
+	 * deliberately deactivated; that is strictly better than leaving the
+	 * implementer read-only, and only affects sessions saved before this field
+	 * existed. Deduped because registration re-adds already-present tools.
+	 */
+	const fullLoadoutFallback = (): string[] => {
+		const registered = [...new Set(
+			pi.getAllTools().map((tool) => tool.name).filter((name) => !PLAN_ONLY_REGISTERED_TOOLS.includes(name)),
+		)];
+		// An empty registered list would strip every tool; prefer the active set.
+		if (registered.length > 0) return registered;
+		return [...new Set(pi.getActiveTools().filter((name) => !PLAN_ONLY_REGISTERED_TOOLS.includes(name)))];
+	};
 	const applyReadOnlyProviderEnv = (): void => {
 		if (providerEnvBeforePlanMode === undefined) {
 			providerEnvBeforePlanMode = {};
@@ -235,7 +251,15 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		providerEnvBeforePlanMode = undefined;
 	};
 	const enablePlanModeTools = (): void => {
-		if (toolsBeforePlanMode === undefined) toolsBeforePlanMode = pi.getActiveTools();
+		if (toolsBeforePlanMode === undefined) {
+			// 0.86.0 restores tools from the transcript before session_start, and a
+			// leaked plan-only set is possible mid-session, so an "active" set that
+			// contains plan-only tools is the plan loadout, not the user's.
+			const active = pi.getActiveTools();
+			toolsBeforePlanMode = active.some((name) => PLAN_ONLY_REGISTERED_TOOLS.includes(name))
+				? fullLoadoutFallback()
+				: active;
+		}
 		applyReadOnlyProviderEnv();
 		pi.setActiveTools(getPlanModeTools(toolsBeforePlanMode));
 	};
@@ -630,6 +654,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			resetPlanSlug();
 			if (pi.getFlag("mf-plan") === true) planModeEnabled = true;
 			const restored = latestPlanModeStateEntry(ctx.sessionManager.getEntries());
+			const restoredPlanModeWasEnabled = restored?.enabled === true;
 			if (restored) {
 				planModeEnabled = restored.enabled ?? planModeEnabled;
 				needsExitReminder = restored.needsExitReminder ?? false;
@@ -637,10 +662,21 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				planRepoSlug = isValidPlanSlug(restored.repoPlanSlug) ? restored.repoPlanSlug : undefined;
 				activeRunMoaInfo = validateMfPlanInfo(restored.moaInfo);
 				implementationHandoff = validateImplementationHandoff(restored.implementationHandoff);
+				toolsBeforePlanMode = validateToolLoadoutSnapshot(restored.toolsBeforePlanMode);
 			}
 			if (planModeEnabled) {
 				lastReentryState = getPlan() !== null;
+				// A persisted plan-mode session had its loadout restored from the transcript
+				// before this handler ran (#9548), so the active set is the plan loadout, not
+				// the user's. Only the persisted snapshot or the registered loadout can be
+				// trusted here. The flag-only path (no entry) is excluded: there plan mode
+				// never ran, so the active set really is the user's.
+				const repairedLoadoutSnapshot = restoredPlanModeWasEnabled && toolsBeforePlanMode === undefined;
+				if (repairedLoadoutSnapshot) toolsBeforePlanMode = fullLoadoutFallback();
 				enablePlanModeTools();
+				// Re-persist the restored (and, if needed, repaired) snapshot so later
+				// resumes of this session see the same trustworthy loadout.
+				if (restoredPlanModeWasEnabled) persistState();
 			} else {
 				deactivatePlanOnlyTools();
 			}

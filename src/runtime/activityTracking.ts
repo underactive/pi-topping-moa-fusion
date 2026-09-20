@@ -1,8 +1,8 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { AssistantMessage, Message } from "@earendil-works/pi-ai";
+import type { AssistantMessage, Message, ToolCall } from "@earendil-works/pi-ai";
 import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import { StreamingWordCounter } from "../activityMeter.ts";
-import { isNonnegativeFiniteNumber, isValidContentIndex, type WireAssistantMessageEvent } from "./wire.ts";
+import { isNonnegativeFiniteNumber, isValidContentIndex } from "./wire.ts";
 
 /** Max length of a one-line tool-activity description surfaced for progress UIs. */
 const ACTIVITY_MAX = 80;
@@ -95,6 +95,19 @@ export class OutputActivityTracker {
 type AssistantContentPart = AssistantMessage["content"][number];
 
 /**
+ * The only fields `apply` reads. Declared structurally rather than as the wire
+ * union so both the JSON-protocol delta and the in-process
+ * `MessageUpdateEvent["assistantMessageEvent"]` are assignable — those two
+ * diverged when JSON `toolcall_start` gained required `id`/`toolName` (#7953).
+ */
+export interface PartialAssistantDelta {
+	type: string;
+	contentIndex?: number;
+	delta?: string;
+	toolCall?: ToolCall;
+}
+
+/**
  * Rebuilds the in-flight assistant message from streamed deltas.
  *
  * `message_update` carries only `contentIndex`-addressed deltas, so a live view
@@ -111,19 +124,22 @@ export class PartialAssistantAssembler {
 		this.#parts = [];
 	}
 
-	apply(assistantEvent: WireAssistantMessageEvent | undefined): void {
+	apply(assistantEvent: PartialAssistantDelta | undefined): void {
 		if (!assistantEvent) return;
-		if (("contentIndex" in assistantEvent && !isValidContentIndex(assistantEvent.contentIndex))) return;
-		if (assistantEvent.type === "text_delta") {
-			const part = this.#parts[assistantEvent.contentIndex];
+		const contentIndex = assistantEvent.contentIndex;
+		// Every handled delta kind is content-indexed, so an absent or out-of-range
+		// index is a no-op — same net effect as the previous `in` check.
+		if (!isValidContentIndex(contentIndex)) return;
+		if (assistantEvent.type === "text_delta" && typeof assistantEvent.delta === "string") {
+			const part = this.#parts[contentIndex];
 			if (part?.type === "text") part.text += assistantEvent.delta;
-			else this.#parts[assistantEvent.contentIndex] = { type: "text", text: assistantEvent.delta };
-		} else if (assistantEvent.type === "thinking_delta") {
-			const part = this.#parts[assistantEvent.contentIndex];
+			else this.#parts[contentIndex] = { type: "text", text: assistantEvent.delta };
+		} else if (assistantEvent.type === "thinking_delta" && typeof assistantEvent.delta === "string") {
+			const part = this.#parts[contentIndex];
 			if (part?.type === "thinking") part.thinking += assistantEvent.delta;
-			else this.#parts[assistantEvent.contentIndex] = { type: "thinking", thinking: assistantEvent.delta };
-		} else if (assistantEvent.type === "toolcall_end") {
-			this.#parts[assistantEvent.contentIndex] = assistantEvent.toolCall;
+			else this.#parts[contentIndex] = { type: "thinking", thinking: assistantEvent.delta };
+		} else if (assistantEvent.type === "toolcall_end" && assistantEvent.toolCall) {
+			this.#parts[contentIndex] = assistantEvent.toolCall;
 		}
 	}
 

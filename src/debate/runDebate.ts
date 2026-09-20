@@ -131,6 +131,10 @@ export async function runInteractiveDebate(
 			} catch {
 				saved = false;
 			}
+			// `sendUserMessage` routes to prompt() and ignores triggerTurn (only
+			// sendCustomMessage honors it), so this report does start a model turn.
+			// Genuinely append-only delivery needs pi.sendMessage({ customType, … },
+			// { triggerTurn: false }) plus a message renderer — a UX change, not made here.
 			const appendOnly: SendUserMessageOptions = { triggerTurn: false };
 			await pi.sendUserMessage(markdown, appendOnly);
 			const active = outcomes.filter((item) => item.finalStatus === "active-at-close").length;

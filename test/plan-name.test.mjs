@@ -2,12 +2,10 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fauxAssistantMessage, fauxThinking, registerFauxProvider } from "@earendil-works/pi-ai/compat";
 
 const tempRoot = mkdtempSync(path.join(tmpdir(), "mf-plan-name-test-"));
 const agentDir = path.join(tempRoot, "agent");
 const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
-let faux;
 
 try {
 	process.env.PI_CODING_AGENT_DIR = agentDir;
@@ -21,60 +19,76 @@ try {
 		"utf8",
 	);
 
-	faux = registerFauxProvider({
-		api: "mf-plan-name-test",
-		models: [{ id: "cheap" }],
-	});
-	const cheapModel = faux.getModel("cheap");
-	let calledModel;
-	let requestedReasoning;
-	faux.setResponses([(_context, options, _state, model) => {
-		calledModel = model;
-		requestedReasoning = options?.reasoning;
-		return fauxAssistantMessage([fauxThinking("no visible answer")]);
-	}]);
-
-	const { summarizePlanPromptName } = await import("../src/config/planName.ts");
-	const ctx = {
-		modelRegistry: {
-			find: (provider, id) => provider === cheapModel.provider && id === cheapModel.id ? cheapModel : undefined,
-			getApiKeyAndHeaders: async () => ({ ok: true, apiKey: "test-key" }),
+	const cheapModel = { provider: "faux", id: "cheap" };
+	const calls = [];
+	let nextResponse;
+	let throwSynchronously = false;
+	const modelRegistry = {
+		find: (provider, id) => provider === cheapModel.provider && id === cheapModel.id ? cheapModel : undefined,
+		streamSimple: (model, context, options) => {
+			calls.push({ model, context, options });
+			if (throwSynchronously) throw new Error("missing auth");
+			const response = nextResponse;
+			return { result: async () => response };
 		},
 	};
+	const ctx = { modelRegistry };
+	const assistant = (content, stopReason = "stop") => ({ role: "assistant", content, stopReason });
 
+	const { summarizePlanPromptName } = await import("../src/config/planName.ts");
+
+	// A visible text response is slugified and the configured cheap model handles naming.
+	nextResponse = assistant([{ type: "text", text: "standalone svg portrait maker" }]);
 	const name = await summarizePlanPromptName(ctx, "Create standalone SVG portrait");
-	assert.equal(name, "create-standalone-svg-portrait");
-	assert.equal(calledModel, cheapModel, "the configured cheap model must handle naming");
-	assert.equal(requestedReasoning, undefined, "plan naming must keep reasoning disabled");
-	assert.notEqual(name, "halcyon-warm-tiger", "an empty model response must not become a random slug");
+	assert.equal(name, "standalone-svg-portrait-maker");
+	assert.equal(calls.at(-1).model, cheapModel, "the configured cheap model must handle naming");
+	assert.equal(calls.at(-1).options?.reasoning, undefined, "plan naming must keep reasoning disabled");
+	assert.match(calls.at(-1).context.messages[0].content[0].text, /Create standalone SVG portrait/);
 
-	// An already-aborted signal must short-circuit to the prompt-derived slug
-	// before the provider is ever called.
+	// Thinking-only and empty text responses fall back to the prompt-derived slug.
+	nextResponse = assistant([{ type: "thinking", thinking: "no visible answer" }]);
+	assert.equal(
+		await summarizePlanPromptName(ctx, "Create standalone SVG portrait"),
+		"create-standalone-svg-portrait",
+	);
+	nextResponse = assistant([{ type: "text", text: "   " }]);
+	assert.equal(
+		await summarizePlanPromptName(ctx, "Create standalone SVG portrait"),
+		"create-standalone-svg-portrait",
+	);
+
+	// An already-aborted signal must short-circuit before streamSimple is called.
 	{
-		const callsBefore = faux.state.callCount;
+		const callsBefore = calls.length;
 		const controller = new AbortController();
 		controller.abort();
 		const abortedName = await summarizePlanPromptName(ctx, "Create standalone SVG portrait", { signal: controller.signal });
-		assert.equal(abortedName, "create-standalone-svg-portrait", "an aborted signal must fall back to the prompt-derived slug");
-		assert.equal(faux.state.callCount, callsBefore, "an already-aborted signal must skip the provider call entirely");
+		assert.equal(abortedName, "create-standalone-svg-portrait");
+		assert.equal(calls.length, callsBefore);
 	}
 
-	// A live (non-aborted) signal must not change the happy path: it is threaded
-	// through to the provider and a normal successful response is still slugified.
+	// A live signal is threaded to the registry stream without changing the happy path.
 	{
-		let capturedSignal;
-		faux.setResponses([(_context, options) => {
-			capturedSignal = options?.signal;
-			return fauxAssistantMessage("standalone svg portrait maker");
-		}]);
+		nextResponse = assistant([{ type: "text", text: "standalone svg portrait maker" }]);
 		const controller = new AbortController();
 		const liveName = await summarizePlanPromptName(ctx, "Create standalone SVG portrait", { signal: controller.signal });
-		assert.equal(liveName, "standalone-svg-portrait-maker", "a live signal must not interfere with a normal successful response");
-		assert.equal(capturedSignal, controller.signal, "the signal must be threaded into the provider call");
-		assert.equal(capturedSignal.aborted, false);
+		assert.equal(liveName, "standalone-svg-portrait-maker");
+		assert.equal(calls.at(-1).options?.signal, controller.signal);
+		assert.equal(calls.at(-1).options?.signal.aborted, false);
 	}
+
+	// A resolved aborted response and a synchronous registry failure both fall back.
+	nextResponse = assistant([], "aborted");
+	assert.equal(
+		await summarizePlanPromptName(ctx, "Create standalone SVG portrait"),
+		"create-standalone-svg-portrait",
+	);
+	throwSynchronously = true;
+	assert.equal(
+		await summarizePlanPromptName(ctx, "Create standalone SVG portrait"),
+		"create-standalone-svg-portrait",
+	);
 } finally {
-	faux?.unregister();
 	if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
 	else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
 	rmSync(tempRoot, { recursive: true, force: true });

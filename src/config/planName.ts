@@ -2,7 +2,6 @@
  * LLM-based 4-word plan name generation for repo-local plan files.
  */
 
-import { completeSimple } from "@earendil-works/pi-ai/compat";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { loadMoaConfig } from "./settings.ts";
 import { generateWordSlug, slugifyPlanName, trySlugifyPlanName } from "../planning/planFile.ts";
@@ -38,35 +37,29 @@ export async function summarizePlanPromptName(ctx: ExtensionContext, prompt: str
 		: ctx.model;
 	if (!model) return fallback();
 
-	// Short-circuit before auth resolution so an already-aborted signal costs nothing.
+	// Short-circuit before registry streaming so an already-aborted signal costs nothing.
 	if (options?.signal?.aborted) return fallback();
-
-	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
-	if (!auth?.ok || !auth.apiKey) return fallback();
 
 	try {
 		// Naming a plan file is not a reasoning task, and the cheap/fast model is
 		// chosen to be cheap. Omitting `reasoning` is how pi's simple-stream API
 		// spells "thinking off" (its ThinkingLevel type has no "off" member), so
 		// providers send their disabled-reasoning mapping rather than a default.
-		const response = await completeSimple(
-			model,
-			{
-				messages: [
-					{
-						role: "user",
-						content: [{ type: "text", text: buildSummarizePrompt(prompt) }],
-						timestamp: Date.now(),
-					},
-				],
-			},
-			{
-				apiKey: auth.apiKey,
-				headers: auth.headers,
-				env: auth.env,
-				signal: options?.signal,
-			},
-		);
+		const response = await ctx.modelRegistry
+			.streamSimple(
+				model,
+				{
+					messages: [
+						{
+							role: "user",
+							content: [{ type: "text", text: buildSummarizePrompt(prompt) }],
+							timestamp: Date.now(),
+						},
+					],
+				},
+				{ signal: options?.signal },
+			)
+			.result();
 
 		// An aborted request can resolve with stopReason "aborted" and empty text
 		// rather than throwing — fall back explicitly instead of slugifying a stub.

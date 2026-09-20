@@ -112,6 +112,30 @@ const delta = (type, text, contentIndex = 0) => ({ type, delta: text, contentInd
 	assert.equal(a.snapshot(), undefined);
 }
 
+// ── the structural delta contract accepts both callers and rejects bad fields ─
+{
+	const a = new PartialAssistantAssembler();
+	a.start({ role: "assistant", content: [], model: "m" });
+	// JSON-protocol text delta.
+	a.apply({ type: "text_delta", contentIndex: 0, delta: "wire" });
+	// In-process MessageUpdateEvent tool-call completion.
+	a.apply({
+		type: "toolcall_end",
+		contentIndex: 1,
+		toolCall: { type: "toolCall", id: "2", name: "grep", arguments: { pattern: "x" } },
+	});
+	assert.deepEqual(a.snapshot().content, [
+		{ type: "text", text: "wire" },
+		{ type: "toolCall", id: "2", name: "grep", arguments: { pattern: "x" } },
+	]);
+
+	const before = JSON.stringify(a.snapshot());
+	a.apply({ type: "text_delta", delta: "missing index" });
+	a.apply({ type: "thinking_delta", contentIndex: 2, delta: 42 });
+	a.apply({ type: "toolcall_end", contentIndex: 2 });
+	assert.equal(JSON.stringify(a.snapshot()), before, "malformed structural deltas must be no-ops");
+}
+
 // ── stderr beacons are strict, framed, and never pollute diagnostics ──────
 {
 	assert.equal(parseUsageBeacon('pi-usage-beacon/1 {"totalTokens":12345}'), 12345);

@@ -94,8 +94,9 @@ export interface RunSingleAgentOptions {
 	 * Called on every streamed turn boundary (each `message_end`) with the live,
 	 * in-progress result. Lets callers observe running usage — notably
 	 * `usage.contextTokens` (the latest turn's total context size) — so a progress
-	 * widget can show a growing context-usage bar while the agent works. Providers
-	 * that run a whole task as one turn only report at the end; see
+	 * widget can show a growing context-usage bar while the agent works.
+	 * `contextTokens` advances from `message_update` usage, authoritative
+	 * `message_end` usage, and the stderr beacon; see
 	 * docs/handoff-bridge-live-context.md.
 	 */
 	onProgress?: (result: SingleResult) => void;
@@ -249,6 +250,23 @@ export async function runSingleAgent(
 					outputActivity.messageUpdate(event.assistantMessageEvent);
 					partialMessage.apply(event.assistantMessageEvent);
 					currentResult.partialAssistant = partialMessage.snapshot();
+					// Interim context reading. Providers that run a whole task as one turn emit a
+					// single message_end, so without this the CTX bar sits at 0% for the run.
+					// A malformed or absent reading is ignored rather than rejected upstream, so a
+					// bad number never costs the run its text deltas.
+					// "beacon" source: never lowers a value and never overrides an authoritative
+					// message_end reading for the same turn.
+					const liveTotal = event.usage?.totalTokens;
+					if (isValidContextTokens(liveTotal)) {
+						const reconciled = reconcileContextTokens(
+							currentResult.usage.contextTokens,
+							contextUsageIsAuthoritative,
+							liveTotal,
+							"beacon",
+						);
+						currentResult.usage.contextTokens = reconciled.contextTokens;
+						contextUsageIsAuthoritative = reconciled.authoritative;
+					}
 					emitUpdate();
 				}
 

@@ -71,6 +71,17 @@ function isWireMessage(value: unknown): boolean {
 		return typeof value.content === "string"
 			|| (Array.isArray(value.content) && value.content.every((part) => isTextContent(part) || isImageContent(part)));
 	}
+	// 0.86.0 children emit a system message_start/message_end pair carrying the
+	// prompt and tool-loadout declaration. It never reaches `messages` (isLlmMessage
+	// filters it) and both trackers ignore non-assistant roles, but rejecting it
+	// here put two spurious parse errors at the head of every failure report.
+	// The pair arrives before any assistant stream, so `partialMessage.start()`
+	// clearing the in-flight partial on a non-assistant message_start loses
+	// nothing today — worth re-checking if a future protocol interleaves them.
+	if (value.role === "system") {
+		return typeof value.content === "string"
+			|| (Array.isArray(value.content) && value.content.every((part) => isTextContent(part)));
+	}
 	if (value.role === "assistant") {
 		return Array.isArray(value.content)
 			&& value.content.every((part) => isTextContent(part) || isThinkingContent(part) || isToolCall(part));

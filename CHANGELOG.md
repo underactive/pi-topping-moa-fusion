@@ -6,6 +6,21 @@
 
 - A `Naming the plan`/`Naming the opinion`/`Naming the debate` working overlay while the cheap/fast model summarizes a submitted prompt into its slug, so the TUI no longer sits unresponsive during that call. Press **Esc** to skip naming and fall back to a name derived from the prompt.
 
+### Fixed
+
+- Resuming, forking, or `--continue`-ing a session saved mid-plan no longer leaves the implementer with a read-only tool loadout after approval. The pre-plan-mode loadout is now persisted with the plan state.
+- Subagent runs no longer log two spurious `event parse error: invalid session event` lines per run. pi 0.86.0's `system` wire messages are accepted instead of leading every failure report.
+- Typechecking against pi 0.84.3 and newer declarations.
+
+### Changed
+
+- Plan naming now uses `ctx.modelRegistry.streamSimple()` instead of the temporary `pi-ai/compat` entry, so proxy and OAuth base-URL overrides are honored.
+- The subagent `CTX` column can now advance mid-turn from `message_update` usage, so one-long-turn provider bridges that report streaming usage are no longer forced to sit at `0.0%` until the run ends. A malformed usage reading is ignored without discarding the subagent's output.
+
+### Removed
+
+- The unfiled `docs/upstream-issue-live-usage.md` draft for a change that has shipped upstream.
+
 ## [0.1.1]
 
 ### Added
