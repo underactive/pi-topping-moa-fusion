@@ -1051,4 +1051,86 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.stopWidget();
 }
 
+// ── a failed row wraps its whole error, instead of cutting it at the cell ──
+{
+	const PROVIDER_ERROR = '400: {"message":"Provider returned error","code":400,"metadata":{"raw":"{\\"error\\":{\\"message\\":\\"Internal Server Error\\",\\"code\\":500}}","provider_name":"Minimax"}}';
+	// The gutter marks the first wrapped line; the rest hang under it. Joining on
+	// nothing and dropping spaces recovers the payload across a mid-token break.
+	const errorBlock = (lines) => {
+		const start = lines.findIndex((l) => l.includes(`↳ ${PROVIDER_ERROR.slice(0, 12)}`));
+		if (start === -1) return [];
+		const block = [lines[start].replace(/^\s*↳ /, "")];
+		for (let i = start + 1; i < lines.length && /^ {6}\S/.test(lines[i]); i++) block.push(lines[i].trim());
+		return block;
+	};
+
+	const { widget, current } = makeWidget();
+	widget.startFanout(PROPOSERS);
+	widget.update(1, "error", PROVIDER_ERROR);
+	const component = current();
+
+	for (const width of [160, 100, 72]) {
+		const lines = component.render(width).map(strip);
+		const block = errorBlock(lines);
+		assert.ok(block.length > 1, `the error wraps onto continuation lines at width ${width}`);
+		assert.equal(
+			block.join("").replace(/ /g, ""),
+			PROVIDER_ERROR.replace(/ /g, ""),
+			`every character of the error is readable at width ${width}, including inside the unbroken JSON payload`,
+		);
+		for (const line of lines) {
+			assert.ok(visibleWidth(line) <= width, `wrapped error lines stay inside width ${width}`);
+		}
+	}
+
+	// The row's own ACTIVITY cell still leads with the message, so a terminal too
+	// short for the wrapped block degrades to exactly the old behaviour.
+	const failed = component.render(160).map(strip).find((l) => l.includes("✗ openai/gpt-5"));
+	assert.match(failed, /400: \{"message"/, "the failed row still leads with its error in the ACTIVITY cell");
+	widget.stopWidget();
+}
+
+// ── an error that already fits its cell is left inline, unwrapped ─────────
+{
+	const { widget, current } = makeWidget();
+	widget.startFanout(PROPOSERS);
+	widget.update(1, "error", "spawn failed");
+	const lines = current().render(160).map(strip);
+	assert.match(lines.find((l) => l.includes("openai/gpt-5")), /spawn failed/, "a short error stays in the ACTIVITY cell");
+	assert.ok(!lines.some((l) => l.includes("↳ spawn failed")), "and spends no sub-row repeating what the cell already shows");
+	widget.stopWidget();
+}
+
+// ── wrapped error detail outranks activity, but still yields to the footer ─
+{
+	const { widget, current } = makeWidget();
+	widget.startFanout(PROPOSERS);
+	widget.updateActivity(0, "read  a.ts");
+	widget.update(1, "error", "P".repeat(300));
+	const component = current();
+
+	const roomy = component.render(100).map(strip);
+	// Rows are padded to the table body, so the trailing run of spaces is expected.
+	const DETAIL_LINE = /^\s+(↳ )?P+…? *$/;
+	const detailLines = (lines) => lines.filter((l) => DETAIL_LINE.test(l)).length;
+	assert.ok(detailLines(roomy) > 1, "a roomy terminal shows the wrapped error");
+	assert.ok(roomy.some((l) => l.includes("↳ read  a.ts")), "and still shows live tool activity");
+
+	component.tui.terminal.rows = 16;
+	const tight = component.render(100).map(strip);
+	assert.ok(detailLines(tight) >= 1, "error detail claims budget before live activity when space is tight");
+	assert.ok(tight.some((l) => l.includes("esc cancel")), "the footer must survive");
+	assert.ok(tight.some((l) => l.includes("openai/gpt-5")), "and so must every agent row");
+
+	// A pathological message is capped so one failed row cannot eat the table,
+	// and the cap marks its cut.
+	component.tui.terminal.rows = 60;
+	widget.update(1, "error", "P".repeat(500));
+	const capped = component.render(46).map(strip);
+	const block = capped.filter((l) => DETAIL_LINE.test(l));
+	assert.equal(block.length, 8, "the wrapped block is capped at ERROR_DETAIL_LINES");
+	assert.ok(block.at(-1).trimEnd().endsWith("…"), "and the capped block marks that it was cut");
+	widget.stopWidget();
+}
+
 console.log("MoA progress widget tests passed.");

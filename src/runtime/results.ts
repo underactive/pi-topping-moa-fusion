@@ -92,6 +92,24 @@ export function getResultOutput(result: { exitCode: number; stopReason?: string;
 	return getFinalOutput(result.messages) || "(no output)";
 }
 
+/**
+ * Longest failure message kept for a status row. Generous enough that a
+ * provider's JSON error payload survives whole for a progress table to wrap
+ * across several lines, bounded so a multi-KB stderr dump cannot crowd out the
+ * table it renders in.
+ */
+const MAX_STATUS_DETAIL_CHARS = 500;
+
+/**
+ * Collapse an agent failure into one bounded line for a progress row. Runs of
+ * whitespace — newlines included — are flattened because the row is laid out as
+ * a single line before its surface wraps it to the available width.
+ */
+export function statusDetail(output: string): string {
+	const collapsed = output.replace(/\s+/g, " ").trim();
+	return collapsed.length <= MAX_STATUS_DETAIL_CHARS ? collapsed : `${collapsed.slice(0, MAX_STATUS_DETAIL_CHARS - 1)}…`;
+}
+
 export function truncateOutput(output: string): string {
 	const maxBytes = 50 * 1024;
 	const bytes = Buffer.from(output, "utf8");

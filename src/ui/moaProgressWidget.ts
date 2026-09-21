@@ -27,7 +27,7 @@
 
 import type { Message } from "@earendil-works/pi-ai";
 import type { ExtensionContext, ThemeColor } from "@earendil-works/pi-coding-agent";
-import { visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
+import { visibleWidth, wrapTextWithAnsi, type Component, type TUI } from "@earendil-works/pi-tui";
 import { ACTIVITY_METER_WIDTH, ActivityMeter, rateToLevel, TokRateTracker } from "../activityMeter.ts";
 import { modelRefLabel, shortModelName, type ModelRef, type ThinkingLevel } from "../shared/modelRefs.ts";
 import { contextPercent, CTX_COL_WIDTH, formatCost, formatElapsed, formatTokens } from "./agentStatus.ts";
@@ -122,6 +122,14 @@ const AGENT_COL_MIN = 8;
 /** Agent width below which a model ref stops being distinguishable from its siblings. */
 const AGENT_COL_READABLE = 24;
 const ACTIVITY_COL_MIN = 10;
+/** Gutter marking a sub-row as belonging to the agent row above it. */
+const SUB_ROW_GUTTER = "↳ ";
+/**
+ * Most wrapped lines one failed row may spend on its error detail. A provider
+ * error fits well inside this at any usable width; the cap only bites on a
+ * pathological message, which must not swallow the whole table.
+ */
+const ERROR_DETAIL_LINES = 8;
 const PREVIEW_LINES = 4;
 const PREVIEW_INDENT = STATUS_COL_WIDTH + 2;
 const PREVIEW_GUTTER = "│ ";
@@ -819,10 +827,24 @@ export class MoaProgressTableComponent implements Component {
 			0,
 			this.rowBudget() - TABLE_CHROME_ROWS - rows.length - phaseSectionRows(rows) - (band.length > 0 ? PHASE_BAND_ROWS : 0),
 		);
+		// A failed row's message is the one status a reader has to act on, and it
+		// routinely outruns the ACTIVITY cell, so its wrapped detail claims budget
+		// ahead of live activity and previews. Failed rows are settled, so they
+		// compete for nothing else.
+		const subRowWidth = Math.max(0, bodyWidth - STATUS_COL_WIDTH - visibleWidth(SUB_ROW_GUTTER));
+		const errorDetails = new Map<number, string[]>();
+		let remaining = free;
+		for (let i = 0; i < rows.length && remaining > 0; i++) {
+			const detail = this.errorDetailLines(rows[i], cols.activity, subRowWidth, Math.min(ERROR_DETAIL_LINES, remaining));
+			if (detail.length === 0) continue;
+			errorDetails.set(i, detail);
+			remaining -= detail.length;
+		}
+
 		const activeIndices = rows.flatMap((r, index) => isActive(r.state) ? [index] : []);
 		const activityIndices = activeIndices.filter((index) => rows[index]?.activity);
-		const renderedActivityIndices = new Set(activityIndices.slice(0, free));
-		let remaining = Math.max(0, free - renderedActivityIndices.size);
+		const renderedActivityIndices = new Set(activityIndices.slice(0, remaining));
+		remaining = Math.max(0, remaining - renderedActivityIndices.size);
 
 		const previewWidth = Math.max(0, leftTableWidth - PREVIEW_INDENT - visibleWidth(PREVIEW_GUTTER));
 		const previewIndices = this.view.previewVisible && previewWidth >= PREVIEW_MIN_WIDTH
@@ -895,6 +917,9 @@ export class MoaProgressTableComponent implements Component {
 				),
 			);
 
+			const errorDetail = errorDetails.get(i) ?? [];
+			for (const [offset, text] of errorDetail.entries()) lines.push(row(this.errorDetailRow(text, offset === 0, subRowWidth)));
+
 			if (renderedActivityIndices.has(i)) lines.push(row(this.activitySubRow(r, bodyWidth)));
 			else if (reservedActivityIndices.has(i)) lines.push(row(""));
 
@@ -932,9 +957,35 @@ export class MoaProgressTableComponent implements Component {
 	/** Merged-cell tool activity line, spanning everything right of the status icon. */
 	private activitySubRow(r: ProgressRow, bodyWidth: number): string {
 		const room = Math.max(0, bodyWidth - STATUS_COL_WIDTH);
-		const gutter = this.theme.fg("dim", "↳ ");
+		const gutter = this.theme.fg("dim", SUB_ROW_GUTTER);
 		const activity = highlightActivity(this.theme, r.activity ?? "");
 		return `${" ".repeat(STATUS_COL_WIDTH)}${cell(`${gutter}${activity}`, room)}`;
+	}
+
+	/**
+	 * A failed row's message re-laid across the table body, or nothing when the
+	 * ACTIVITY cell already shows it whole. Provider failures arrive as one long
+	 * JSON payload whose cause sits well past the column edge, so the text is
+	 * wrapped — breaking the payload mid-token when it has no spaces to break on
+	 * — rather than cut off at a width the reader cannot change.
+	 */
+	private errorDetailLines(row: ProgressRow, activityWidth: number, width: number, maxLines: number): string[] {
+		if (row.state !== "error" || !row.statusText) return [];
+		if (width <= 0 || maxLines <= 0) return [];
+		if (visibleWidth(row.statusText) <= activityWidth) return [];
+		const wrapped = wrapTextWithAnsi(row.statusText, width);
+		if (wrapped.length <= maxLines) return wrapped;
+		// Mark the cut, so a clipped payload never reads as the whole message.
+		const shown = wrapped.slice(0, maxLines);
+		shown[maxLines - 1] = fitVisible(`${shown[maxLines - 1]}…`, width, { truncationMark: "…", padToWidth: false });
+		return shown;
+	}
+
+	/** One wrapped error line: the gutter carries the first, the rest hang under it. */
+	private errorDetailRow(text: string, first: boolean, width: number): string {
+		const gutter = first ? this.theme.fg("dim", SUB_ROW_GUTTER) : " ".repeat(visibleWidth(SUB_ROW_GUTTER));
+		const detail = fitVisible(text, width, { truncationMark: "…", padToWidth: false });
+		return `${" ".repeat(STATUS_COL_WIDTH)}${gutter}${this.theme.fg("error", detail)}`;
 	}
 
 	private topBorder(innerWidth: number, border: (s: string) => string): string {

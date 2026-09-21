@@ -2,7 +2,7 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import type { AgentConfig } from "../agents/discovery.ts";
 import type { CancelRun, CancelSession } from "../runtime/cancelRun.ts";
-import { getResultOutput, isFailedResult, type SingleResult } from "../runtime/results.ts";
+import { getResultOutput, isFailedResult, statusDetail, type SingleResult } from "../runtime/results.ts";
 import { runParallelAgentsWithModels, type ModelParallelAgentTask } from "../runtime/runner.ts";
 import type { ModelRef } from "../shared/modelRefs.ts";
 import type { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
@@ -55,7 +55,7 @@ export async function runWidgetFanout(options: WidgetFanoutOptions): Promise<Sin
 					if (observed) observed.state = "cancelled";
 				} else if (isFailedResult(result)) {
 					run.settle(index, "error");
-					widget.update(widgetIndex, "error", getResultOutput(result).slice(0, 80));
+					widget.update(widgetIndex, "error", statusDetail(getResultOutput(result)));
 					if (observed) observed.state = "error";
 				} else {
 					run.settle(index, "done");

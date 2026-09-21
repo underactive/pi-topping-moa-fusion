@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-const { getFinalOutput } = await import("../src/runtime/results.ts");
+const { getFinalOutput, statusDetail } = await import("../src/runtime/results.ts");
 
 const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
 const assistant = (parts) => ({ role: "assistant", content: parts });
@@ -49,5 +49,22 @@ assert.equal(
 assert.equal(getFinalOutput([]), "");
 assert.equal(getFinalOutput([user("question only")]), "");
 assert.equal(getFinalOutput([assistant([text("")])]), "");
+
+// ── statusDetail bounds a failure message without cutting a readable one ──
+{
+	const providerError = '400: {"message":"Provider returned error","code":400,"metadata":{"raw":"{\\"error\\":{\\"code\\":500}}","provider_name":"Minimax"}}';
+	assert.equal(statusDetail(providerError), providerError, "a provider error survives whole — the progress table wraps it, so it must not arrive pre-cut");
+	assert.equal(statusDetail("  spawn failed  "), "spawn failed", "surrounding whitespace is trimmed");
+	assert.equal(
+		statusDetail("connection reset\n  by peer\n\nretrying"),
+		"connection reset by peer retrying",
+		"newlines and runs of whitespace collapse, so the message lays out as one line",
+	);
+
+	const huge = statusDetail("E".repeat(4000));
+	assert.equal(huge.length, 500, "a multi-KB dump is bounded so it cannot crowd out the table it renders in");
+	assert.ok(huge.endsWith("…"), "and the cut is marked, so a clipped message never reads as the whole one");
+	assert.equal(statusDetail("E".repeat(500)), "E".repeat(500), "a message exactly at the bound is kept intact and unmarked");
+}
 
 console.log("final-output tests passed");

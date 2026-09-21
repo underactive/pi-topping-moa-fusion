@@ -4,7 +4,7 @@ import type { AgentConfig } from "../agents/discovery.ts";
 import { modelExtensionOptions, resolveContextWindow, resolveModelCost } from "../moa/modelRuntime.ts";
 import type { CancelSession } from "../runtime/cancelRun.ts";
 import { CancelRun } from "../runtime/cancelRun.ts";
-import { getFinalOutput, getResultOutput, isFailedResult, type SingleResult } from "../runtime/results.ts";
+import { getFinalOutput, getResultOutput, isFailedResult, statusDetail, type SingleResult } from "../runtime/results.ts";
 import { runParallelAgentsWithModels, type ModelParallelAgentTask } from "../runtime/runner.ts";
 import { modelRefLabel, type ModelRef, type ThinkingLevel } from "../shared/modelRefs.ts";
 import { activityLoopCount } from "../ui/agentStatus.ts";
@@ -117,7 +117,7 @@ export async function runDebateRounds(options: DebateFanoutOptions): Promise<Deb
 							if (observed) observed.state = "cancelled";
 						} else if (isFailedResult(result)) {
 							currentRun.settle(batchIndex, "error");
-							widget.update(debateIndex, "error", getResultOutput(result).slice(0, 80));
+							widget.update(debateIndex, "error", statusDetail(getResultOutput(result)));
 							if (observed) observed.state = "error";
 						} else {
 							currentRun.settle(batchIndex, "done");
