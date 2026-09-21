@@ -8,8 +8,8 @@
  *
  * Two kinds of slot are configured here. Planning-subagent slots persist into
  * the frontmatter of the installed agent files; MoA fan-out roles are no
- * longer set per role here — they live in named rosters, edited by the staged
- * roster manager and persisted only when this overlay's Save is chosen.
+ * longer set per role here — they live in named rosters whose completed edits
+ * are persisted immediately by the roster manager.
  */
 
 import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
@@ -361,7 +361,13 @@ export async function showMoaSetup(
 			draft.useSummaryName = result.draft.useSummaryName;
 			draft.maxConcurrentAgents = result.draft.maxConcurrentAgents;
 			draft.maxVerificationRepairs = result.draft.maxVerificationRepairs;
-			draft.rosters = await showRosterManager(ctx, draft.rosters, { currentThinking });
+			draft.rosters = await showRosterManager(ctx, draft.rosters, {
+				currentThinking,
+				onChange: (rosters) => {
+					const current = loadMoaConfig();
+					saveMoaConfig({ ...current, rosters });
+				},
+			});
 			continue;
 		}
 		break;

@@ -272,7 +272,7 @@ Rosters persist in `~/.pi/agent/mf-plan/settings.json`:
 }
 ```
 
-Names are 1–24 alphanumeric characters, unique case-insensitively, up to 20 rosters. The roster manager stages every edit in memory — nothing is written until the settings overlay's **Save and Close**.
+Names are 1–24 alphanumeric characters, unique case-insensitively, up to 20 rosters. Slot edits remain drafts until **Save roster** is selected; that action persists the completed roster immediately, without requiring **Save and Close** in the parent settings overlay.
 
 #### Max concurrent agents
 

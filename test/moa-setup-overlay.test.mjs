@@ -243,6 +243,45 @@ try {
 	// Saving clears the first-run gate.
 	assert.equal(loadMoaConfig().agentDefaultsConfigured, true);
 
+	// Saving a roster persists it immediately even if the reopened parent
+	// settings overlay is cancelled instead of saved.
+	const immediateRoster = {
+		name: "Immediate1",
+		proposers: [
+			{ ref: { provider: "anthropic", id: "claude-haiku-4-5" }, thinking: "medium" },
+			{ ref: { provider: "anthropic", id: "claude-opus-4-6" }, thinking: "high" },
+		],
+		synthesizer: { ref: { provider: "anthropic", id: "claude-opus-4-6" }, thinking: "high" },
+		implementer: { ref: { provider: "anthropic", id: "claude-haiku-4-5" }, thinking: "medium" },
+		verifier: { ref: { provider: "anthropic", id: "claude-haiku-4-5" }, thinking: "off" },
+	};
+	saveMoaConfig({ ...loadMoaConfig(), rosters: [immediateRoster] });
+	const immediateCtx = {
+		...ctx,
+		...drive([
+			(component) => {
+				component.handleInput(DOWN);
+				component.handleInput(DOWN);
+				component.handleInput(ENTER); // agent rosters
+			},
+			(component) => component.handleInput(ENTER), // edit Immediate1
+			(component) => component.handleInput(ENTER), // edit Proposer 1
+			(component) => {
+				component.handleInput(TAB);
+				component.handleInput(DOWN); // medium → high
+				component.handleInput(ENTER);
+			},
+			(component) => {
+				component.handleInput(TAB);
+				component.handleInput(ENTER); // Save roster
+			},
+			(component) => component.handleInput(ESCAPE), // Back from roster list
+			(component) => component.handleInput(ESCAPE), // Cancel parent settings
+		]),
+	};
+	assert.equal(await showMoaSetup(immediateCtx, "medium"), false);
+	assert.equal(loadMoaConfig().rosters[0].proposers[0].thinking, "high");
+
 	// Cancelling reports failure, and the first-run title explains why the
 	// overlay appeared in place of the plan prompt.
 	let firstRunTitle = "";

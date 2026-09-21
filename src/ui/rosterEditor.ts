@@ -3,9 +3,9 @@
  *
  * A staged CRUD surface over the saved `PlanRoster` list: list → name prompt →
  * slot editor → per-slot model/thinking picker, ported from persona-audit's
- * RosterEditor. Every mutation happens on in-memory copies; persistence stays
- * with the settings overlay's Save button, so closing without saving (or the
- * overlay's Cancel) leaves settings.json untouched.
+ * RosterEditor. Draft slot changes remain in memory until Save roster is
+ * chosen; completed roster saves and confirmed deletions are then persisted
+ * immediately through the manager's onChange callback.
  *
  * Each roster carries one model + thinking level for every fan-out role —
  * 2–5 proposers plus synthesizer, implementer, and verifier. A roster must be
@@ -245,7 +245,7 @@ async function editRoster(
 		if (result.action === "cancel") return undefined;
 		if (result.action === "save") return fromDraft(result.draft);
 		if (result.action === "delete") {
-			if (await ctx.ui.confirm("Delete agent roster?", `Delete ${draft.name}? This is staged until settings are saved.`)) return "delete";
+			if (await ctx.ui.confirm("Delete agent roster?", `Delete ${draft.name}? This takes effect immediately.`)) return "delete";
 			continue;
 		}
 		if (result.action === "rename") {
@@ -272,11 +272,11 @@ async function editRoster(
 	}
 }
 
-/** Manage a staged roster collection; persistence remains the settings overlay's Save action's responsibility. */
+/** Manage roster drafts and publish completed saves immediately through onChange. */
 export async function showRosterManager(
 	ctx: ExtensionContext,
 	initial: PlanRoster[],
-	deps: { currentThinking: ThinkingLevel },
+	deps: { currentThinking: ThinkingLevel; onChange?: (rosters: PlanRoster[]) => void },
 ): Promise<PlanRoster[]> {
 	const rosters = initial.map((roster) => ({ ...roster, proposers: [...roster.proposers] }));
 	for (;;) {
@@ -298,13 +298,21 @@ export async function showRosterManager(
 				undefined,
 				deps.currentThinking,
 			);
-			if (created && created !== "delete") rosters.push(created);
+			if (created && created !== "delete") {
+				rosters.push(created);
+				deps.onChange?.(rosters);
+			}
 			continue;
 		}
 		const current = rosters[action.index];
 		if (!current) continue;
 		const edited = await editRoster(ctx, rosters, toDraft(current), action.index, deps.currentThinking);
-		if (edited === "delete") rosters.splice(action.index, 1);
-		else if (edited) rosters[action.index] = edited;
+		if (edited === "delete") {
+			rosters.splice(action.index, 1);
+			deps.onChange?.(rosters);
+		} else if (edited) {
+			rosters[action.index] = edited;
+			deps.onChange?.(rosters);
+		}
 	}
 }

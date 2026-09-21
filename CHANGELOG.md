@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Saving or deleting an agent roster now takes effect immediately, without requiring a second save from the main settings overlay.
 - A failed agent's error is now readable in full without widening the terminal. Provider failures were cut to 80 characters before reaching the progress table and then truncated again at the ACTIVITY column edge, hiding the part naming the cause. The message is now kept whole and word-wrapped beneath its row — breaking the JSON payload mid-token when it has no spaces to break on — while a short error stays inline as before.
 
 ## [0.2.0]

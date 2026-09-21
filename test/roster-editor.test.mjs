@@ -103,11 +103,15 @@ try {
 
 	// ---------------------------------------------------------------------
 	// Journey 1: create a roster, assign two proposers and all three roles,
-	// save — the staged list then shows the complete roster. No disk writes.
+	// save — the list shows the complete roster and publishes the change.
 	// ---------------------------------------------------------------------
 	harness = new Harness();
 	harness.names.push("Core5");
-	const result = showRosterManager(harness.ctx, [], { currentThinking: "medium" });
+	const published = [];
+	const result = showRosterManager(harness.ctx, [], {
+		currentThinking: "medium",
+		onChange: (rosters) => published.push(structuredClone(rosters)),
+	});
 
 	assert.match(harness.render(), /Create roster/);
 	harness.send(ENTER); // Create roster
@@ -168,7 +172,17 @@ try {
 		implementer: { ref: { provider: "test", id: "haiku" }, thinking: "medium" },
 		verifier: { ref: { provider: "test", id: "haiku" }, thinking: "medium" },
 	}]);
-	assert.equal(existsSync(settingsPath), false, "the roster manager must never write settings.json");
+	assert.deepEqual(published, [[{
+		name: "Core5",
+		proposers: [
+			{ ref: { provider: "test", id: "opus" }, thinking: "medium" },
+			{ ref: { provider: "test", id: "haiku" }, thinking: "high" },
+		],
+		synthesizer: { ref: { provider: "test", id: "haiku" }, thinking: "medium" },
+		implementer: { ref: { provider: "test", id: "haiku" }, thinking: "medium" },
+		verifier: { ref: { provider: "test", id: "haiku" }, thinking: "medium" },
+	}]], "Save roster must publish the completed roster immediately");
+	assert.equal(existsSync(settingsPath), false, "persistence remains the caller's responsibility");
 
 	// ---------------------------------------------------------------------
 	// Journey 2: saving an incomplete roster is refused with a readiness
@@ -247,7 +261,11 @@ try {
 		implementer: { ref: { provider: "test", id: "haiku" }, thinking: "medium" },
 		verifier: { ref: { provider: "test", id: "opus" }, thinking: "off" },
 	}];
-	const deleted = showRosterManager(harness.ctx, existing, { currentThinking: "medium" });
+	const deletedPublished = [];
+	const deleted = showRosterManager(harness.ctx, existing, {
+		currentThinking: "medium",
+		onChange: (rosters) => deletedPublished.push(structuredClone(rosters)),
+	});
 
 	assert.match(harness.render(), /Core5/);
 	assert.match(harness.render(), /5 roles assigned/);
@@ -268,6 +286,7 @@ try {
 	assert.match(harness.render(), /Create roster/, "a confirmed delete returns to the staged list");
 	harness.send(ESCAPE); // Back
 	assert.deepEqual(await deleted, []);
+	assert.deepEqual(deletedPublished, [[]], "confirmed deletion must publish immediately");
 	assert.equal(existsSync(settingsPath), false);
 
 	console.log("Roster editor tests passed.");
