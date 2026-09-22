@@ -2,8 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- A hidden `mf-plan-verification-pending` session marker now records when an approved implementation is expected to enter independent verification. Resuming before a verifier result is recorded warns that the implementation is still unverified.
+
+### Changed
+
+- Updated all four pi development dependencies from 0.86.0 to 0.87.0.
+- The pi 0.87 settle-boundary context-edit and verification-marker integrations are capability-gated and remain inert on older hosts, which retain the existing request-time filtering and verification dispatch behavior.
+
 ### Fixed
 
+- Reusable `[PLAN MODE ACTIVE]` and `[PLAN MODE RE-ENTRY]` instruction entries are now durably omitted with settle-boundary null context edits after plan-mode exit, preventing later compaction from carrying stale plan instructions into implementation.
+- Custom OpenAI-compatible endpoints used by proposers and verifiers now benefit from pi 0.87's upstream strict-schema capability fix: unknown endpoints no longer receive strict tool schemas unless they explicitly advertise support.
 - Saving or deleting an agent roster now takes effect immediately, without requiring a second save from the main settings overlay.
 - A failed agent's error is now readable in full without widening the terminal. Provider failures were cut to 80 characters before reaching the progress table and then truncated again at the ACTIVITY column edge, hiding the part naming the cause. The message is now kept whole and word-wrapped beneath its row — breaking the JSON payload mid-token when it has no spaces to break on — while a short error stays inline as before.
 

@@ -270,6 +270,10 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 	registerMfPlanSubagentTool(pi, controller);
 	registerExitPlanModeTool(pi, controller);
 
+	// Deliberately not context_with_system (pi 0.87.0): its result is sent
+	// verbatim, so a filtering mistake could drop pi's prompt and tool declarations.
+	// Keep injection in before_agent_start, filtering in context, and durable
+	// omissions in agent_before_settle so pi continues to own prompt/tool state.
 	pi.on("context", controller.onContext);
 	pi.on("before_agent_start", controller.onBeforeAgentStart);
 	pi.on("agent_start", controller.onAgentStart);
@@ -277,6 +281,7 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 	pi.on("message_update", controller.onMessageUpdate);
 	pi.on("tool_execution_start", controller.onToolExecutionStart);
 	pi.on("message_end", controller.onMessageEnd);
+	pi.on("agent_before_settle", controller.onAgentBeforeSettle);
 	pi.on("agent_settled", controller.onAgentSettled);
 	pi.on("session_start", controller.onSessionStart);
 	pi.on("session_shutdown", controller.onSessionShutdown);

@@ -60,6 +60,8 @@ try {
 	const togglePlanMode = commands.get("mf-plan");
 	assert.equal(typeof shutdown, "function");
 	assert.equal(typeof sessionStart, "function");
+	assert.equal(typeof handlers.get("agent_before_settle"), "function");
+	assert.equal(handlers.has("context_with_system"), false);
 	assert.equal(typeof togglePlanMode?.handler, "function");
 
 	const indexSource = readFileSync(new URL("../src/moa/reviewLoop.ts", import.meta.url), "utf8");

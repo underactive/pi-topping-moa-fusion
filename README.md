@@ -437,7 +437,7 @@ agents/                      # Shipped agent definitions
 - **Custom `write_plan` tool** instead of path-guarded `edit`/`write` — guarantees the single-writable-file invariant.
 - **Subprocess subagents** (not in-process) — each agent runs in an isolated `pi --mode json -p --no-session` subprocess with an enforced read-only tool allowlist.
 - **State via `appendEntry`** — plan mode state (enabled, slug, tools snapshot) persists in the session for `/resume` and `/reload`.
-- **Context injection via `before_agent_start`** — the 5-phase instructions are injected as a user message every turn while plan mode is active; the `context` hook strips stale plan-mode messages once it is off.
+- **Context injection and lifecycle cleanup via `before_agent_start` + `context`** — the 5-phase instructions are injected as a user message every turn while plan mode is active, and the `context` hook strips stale plan-mode messages once it is off. On pi 0.87+, the settle boundary also persists null context edits for reusable plan-instruction entries once plan mode is off, so later compaction cannot carry those instructions forward. When an approved implementation is expected to enter verification, the same boundary persists a hidden `mf-plan-verification-pending` marker so a resumed session can warn that verification is still outstanding.
 - **MoA proposers never pause mid-run** — subprocess subagents are one-shot, so a proposer that hits an ambiguity records it as an assumption and keeps going. Only the synthesizer, which sees every proposal, asks the user anything — keeping fan-out fully parallel.
 
 ## Porting Notes

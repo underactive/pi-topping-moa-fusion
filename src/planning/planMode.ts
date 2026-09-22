@@ -1,7 +1,8 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { Message, TextContent } from "@earendil-works/pi-ai";
+import type { Message } from "@earendil-works/pi-ai";
 import { Key } from "@earendil-works/pi-tui";
 import type {
+	AgentBeforeSettleEvent,
 	AgentSettledEvent,
 	AgentStartEvent,
 	ExtensionAPI,
@@ -9,6 +10,7 @@ import type {
 	MessageEndEvent,
 	MessageStartEvent,
 	MessageUpdateEvent,
+	SessionBoundaryDraft,
 	ThemeColor,
 	ToolExecutionStartEvent,
 } from "@earendil-works/pi-coding-agent";
@@ -39,10 +41,18 @@ import { MoaProgressWidget } from "../ui/moaProgressWidget.ts";
 import { showObserveOverlay, type ObserveSession } from "../ui/observeOverlay.ts";
 import { planNamingOverlay, withWorkingOverlay } from "../ui/workingOverlay.ts";
 import { ASK_USER_QUESTION_TOOL_NAME, createAskUserQuestionTracker, isAskUserQuestionInstalled } from "./askUserQuestion.ts";
+import {
+	buildVerificationPendingMessage,
+	collectOmissionDrafts,
+	isPlanInstructionEntry,
+	isPlanModeInstructionText,
+	isVerificationPendingEntry,
+	type ScannedEntry,
+} from "./contextEdits.ts";
 import { buildPlanModeExitInstructions, buildPlanModeInstructions, buildPlanModeReentryInstructions } from "./instructions.ts";
 import { latestPlanModeStateEntry, PlanModeStatePersistence, validateToolLoadoutSnapshot } from "./modeState.ts";
 import { getPlan, getPlanSlug, isValidPlanSlug, resetPlanSlug, saveRepoPlanFile, setPlanSlug, slugifyPlanName } from "./planFile.ts";
-import { PLAN_EXIT_CONTEXT_TYPE, PLAN_MODE_CONTEXT_TYPE, PLAN_MODE_CUSTOM_TOOLS, PLAN_MODE_READ_ONLY_TOOLS, PLAN_ONLY_REGISTERED_TOOLS } from "./tools/shared.ts";
+import { PLAN_EXIT_CONTEXT_TYPE, PLAN_MODE_CONTEXT_TYPE, PLAN_MODE_CUSTOM_TOOLS, PLAN_MODE_READ_ONLY_TOOLS, PLAN_ONLY_REGISTERED_TOOLS, VERIFICATION_PENDING_CONTEXT_TYPE } from "./tools/shared.ts";
 
 /** Trailing chars of the implementer report kept for the verifier's evidence. */
 const IMPLEMENTATION_REPORT_MAX_CHARS = 8000;
@@ -86,6 +96,17 @@ function extractAssistantText(content: unknown): string {
 	return "";
 }
 
+// Existing tests and stale post-reload contexts may not expose getBranch;
+// boundary handlers should become inert rather than throw in that case.
+function readBranchEntries(ctx: ExtensionContext): readonly ScannedEntry[] {
+	try {
+		const manager = ctx.sessionManager as { getBranch?: () => readonly ScannedEntry[] };
+		return typeof manager.getBranch === "function" ? manager.getBranch() : [];
+	} catch {
+		return [];
+	}
+}
+
 export function createPlanModeController(pi: ExtensionAPI) {
 	let planModeEnabled = false;
 	let toolsBeforePlanMode: string[] | undefined;
@@ -99,6 +120,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	let activeRunMoaInfo: MfPlanInfo | undefined;
 	let implementationHandoff: ImplementationHandoff | undefined;
 	let implementationPending = false;
+	let verificationInFlight = false;
+	const omittedEntryIds = new Set<string>();
 	let lastImplementationStopReason: string | undefined;
 	// The implementer's final assistant text, captured while pending so the
 	// verifier can be handed the implementer's own (untrusted) report. Capped to
@@ -548,6 +571,63 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				activeProgressWidget?.updateRoleTranscript("Implement", implementationMessages);
 			}
 		},
+		onAgentBeforeSettle: (event: AgentBeforeSettleEvent, ctx: ExtensionContext) => {
+			try {
+				const branch = readBranchEntries(ctx);
+				const persistedOmissions = new Set(
+					branch
+						.filter((entry) => entry.type === "context_edit" && entry.replacement === null && typeof entry.targetId === "string")
+						.map((entry) => entry.targetId as string),
+				);
+				// A different extension can invalidate the combined boundary proposal.
+				// Forget locally proposed edits that did not reach the branch so they are
+				// retried rather than suppressed for the rest of this process.
+				for (const id of omittedEntryIds) {
+					if (!persistedOmissions.has(id)) omittedEntryIds.delete(id);
+				}
+				const drafts: SessionBoundaryDraft[] = [];
+
+				// Persist plan-instruction omissions after plan mode exits. This is
+				// additive to onContext's per-request filter and repairs older sessions.
+				if (!planModeEnabled) {
+					drafts.push(...collectOmissionDrafts(branch, isPlanInstructionEntry, omittedEntryIds));
+				}
+				if (!verificationInFlight) {
+					drafts.push(...collectOmissionDrafts(branch, isVerificationPendingEntry, omittedEntryIds));
+				}
+
+				const stopReason = lastImplementationStopReason;
+				// KEEP IN LOCKSTEP with onAgentSettled's verification branch below.
+				// exit_plan_mode marks implementation pending before the follow-up has
+				// run, so implementationTurns distinguishes that planning boundary.
+				const verificationWillDispatch = implementationPending
+					&& implementationTurns > 0
+					&& event.context.pendingMessages.length === 0
+					&& event.outcome !== "aborted"
+					&& event.outcome !== "error"
+					&& !implementationTurnFailed(stopReason)
+					&& stopReason !== "aborted"
+					&& implementationHandoff !== undefined
+					&& (implementationHandoff.verifier ?? loadMoaConfig().verifier) !== undefined;
+				if (verificationWillDispatch) {
+					drafts.push({
+						type: "custom_message",
+						customType: VERIFICATION_PENDING_CONTEXT_TYPE,
+						content: buildVerificationPendingMessage(implementationHandoff?.planFilePath),
+						display: false,
+					});
+				}
+
+				if (drafts.length === 0) return undefined;
+				for (const draft of drafts) {
+					if (draft.type === "context_edit") omittedEntryIds.add(draft.targetId);
+				}
+				return { entries: [...event.entries, ...drafts] };
+			} catch {
+				// A thrown boundary handler could reject every proposed entry.
+				return undefined;
+			}
+		},
 		onAgentSettled: (_event: AgentSettledEvent, ctx: ExtensionContext) => {
 			updateStatus(ctx);
 			if (!implementationPending) return;
@@ -595,10 +675,13 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			// explicit guard is required before the verification branch.
 			if (stopReason === "aborted") return;
 			if (!implementationHandoff) return;
+			// KEEP IN LOCKSTEP with verificationWillDispatch in onAgentBeforeSettle.
 			const verifier = implementationHandoff.verifier ?? loadMoaConfig().verifier;
 			if (verifier) {
+				verificationInFlight = true;
 				void runImplementationVerification(ctx, moaRunHost, { ...implementationHandoff, verifier }, report)
-					.catch(reportFlowFailure("Verification"));
+					.catch(reportFlowFailure("Verification"))
+					.finally(() => { verificationInFlight = false; });
 			}
 		},
 		onContext: async (event: { messages: AgentMessage[] }) => {
@@ -607,9 +690,7 @@ export function createPlanModeController(pi: ExtensionAPI) {
 				const msg = message as AgentMessage & { customType?: string };
 				if (msg.customType === PLAN_MODE_CONTEXT_TYPE || msg.customType === PLAN_EXIT_CONTEXT_TYPE) return false;
 				if (msg.role !== "user") return true;
-				if (typeof msg.content === "string") return !msg.content.startsWith("[PLAN MODE ACTIVE]") && !msg.content.startsWith("[PLAN MODE RE-ENTRY]");
-				if (Array.isArray(msg.content)) return !msg.content.some((part) => part.type === "text" && ((part as TextContent).text?.startsWith("[PLAN MODE ACTIVE]") || (part as TextContent).text?.startsWith("[PLAN MODE RE-ENTRY]")));
-				return true;
+				return !isPlanModeInstructionText(msg.content);
 			}) };
 		},
 		onBeforeAgentStart: async () => {
@@ -641,6 +722,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			activeCancelSession = undefined;
 			activeObserveSession = undefined;
 			implementationHandoff = undefined;
+			verificationInFlight = false;
+			omittedEntryIds.clear();
 			footerError = undefined;
 			lastRenderedFooter = undefined;
 			lastFooterCtx = undefined;
@@ -680,6 +763,13 @@ export function createPlanModeController(pi: ExtensionAPI) {
 			} else {
 				deactivatePlanOnlyTools();
 			}
+			try {
+				if (collectOmissionDrafts(readBranchEntries(ctx), isVerificationPendingEntry, new Set()).length > 0) {
+					ctx.ui.notify("The previous session ended before plan verification finished — the last implementation is unverified. Run /mf-plan-implement to verify it.", "warning");
+				}
+			} catch {
+				// A stale session-start context cannot be notified safely.
+			}
 			updateStatus(ctx);
 			startFooterTicker(ctx);
 			if (ctx.mode === "tui" && typeof ctx.ui.onTerminalInput === "function") {
@@ -694,6 +784,8 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		},
 		onSessionShutdown: (_event: { reason: string }) => {
 			implementationPending = false;
+			verificationInFlight = false;
+			omittedEntryIds.clear();
 			lastImplementationStopReason = undefined;
 			lastImplementationReport = undefined;
 			resetImplementationTranscript();

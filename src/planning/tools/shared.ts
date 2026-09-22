@@ -17,3 +17,4 @@ export const PLAN_ONLY_REGISTERED_TOOLS = ["write_plan", "exit_plan_mode", "mf_p
 export const PLAN_SUBAGENT_NAMES = new Set(["moa-explore", "mf-plan"]);
 export const PLAN_MODE_CONTEXT_TYPE = "mf-plan-context";
 export const PLAN_EXIT_CONTEXT_TYPE = "mf-plan-exit";
+export const VERIFICATION_PENDING_CONTEXT_TYPE = "mf-plan-verification-pending";

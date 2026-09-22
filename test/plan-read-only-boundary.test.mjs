@@ -63,7 +63,7 @@ assert.match(orchestration, /restoreReadOnlyProviderEnv\(\);\s*\n\s*pi\.setActiv
 // activates them session-wide, and models were picking mf_plan_subagent over
 // the general-purpose subagent tool during normal agentic sessions.
 assert.match(orchestration, /const PLAN_ONLY_REGISTERED_TOOLS = \["write_plan", "exit_plan_mode", "mf_plan_subagent"\]/);
-assert.match(orchestration, /\} else \{\s*deactivatePlanOnlyTools\(\);\s*\}\s*\n\s*updateStatus\(ctx\);/);
+assert.match(orchestration, /\} else \{\s*deactivatePlanOnlyTools\(\);\s*\}[\s\S]*?updateStatus\(ctx\);/);
 assert.match(orchestration, /if \(!planModeEnabled\) \{\s*deactivatePlanOnlyTools\(\);\s*return;\s*\}/);
 assert.doesNotMatch(orchestration, /registerExitPlanModeTool\(pi, controller\);\s*controller\.deactivatePlanOnlyTools\(\);/);
 assert.match(orchestration, /if \(controller\.questionnaireBusy\(ctx\)\) return;\s*\n\s*if \(controller\.isEnabled\(\)\) controller\.exitPlanMode\(ctx\);\s*\n\s*let handoff = controller\.getImplementationHandoff\(\);/);
@@ -89,7 +89,7 @@ assert.doesNotMatch(orchestration, /terminate: true/);
 // and terminates tracked subprocesses.
 assert.match(
 	orchestration,
-	/onSessionShutdown: \(_event: \{ reason: string \}\) => \{\s*implementationPending = false;\s*lastImplementationStopReason = undefined;\s*lastImplementationReport = undefined;\s*resetImplementationTranscript\(\);\s*stopActiveProgressWidget\(\);\s*runningProgressWidget = undefined;\s*restoreReadOnlyProviderEnv\(\);\s*cleanupTrackedProcesses\(\);/,
+	/onSessionShutdown: \(_event: \{ reason: string \}\) => \{\s*implementationPending = false;[\s\S]*?lastImplementationStopReason = undefined;\s*lastImplementationReport = undefined;\s*resetImplementationTranscript\(\);\s*stopActiveProgressWidget\(\);\s*runningProgressWidget = undefined;\s*restoreReadOnlyProviderEnv\(\);\s*cleanupTrackedProcesses\(\);/,
 );
 
 // ── The read-only verifier subprocess is spawned like every planning agent ──
