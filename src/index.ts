@@ -12,7 +12,7 @@ import {
 } from "./moa/implementationRetry.ts";
 import { modelRefLabel, TRIGGER_TURN } from "./shared/modelRefs.ts";
 import { loadMoaConfig } from "./config/settings.ts";
-import { getPlanFilePath, getRepoPlanDirectory, isValidPlanSlug, readRepoPlanFile, saveRepoPlanFile } from "./planning/planFile.ts";
+import { getPlanFilePath, getRepoPlanDirectory, isApprovedRepoPlanFilename, isValidPlanSlug, readRepoPlanFile, saveRepoPlanFile } from "./planning/planFile.ts";
 import { showImplementingModelPicker } from "./ui/moaModelPicker.ts";
 import { showPlanReview } from "./ui/planReviewOverlay.ts";
 import { showMoaSetup } from "./ui/moaSetupOverlay.ts";
@@ -20,6 +20,7 @@ import { runCriteriaGeneration } from "./moa/verificationCriteria.ts";
 import { stripSynthSections } from "./moa/verdicts.ts";
 import { runInteractiveOpinion, type OpinionHost } from "./opinion/runOpinion.ts";
 import { runInteractiveDebate } from "./debate/runDebate.ts";
+import { createSpecRunner } from "./spec/runSpec.ts";
 import { createPlanModeController } from "./planning/planMode.ts";
 import { registerEnterPlanModeTool, runInteractivePlanMode } from "./planning/tools/enterPlanMode.ts";
 import { registerExitPlanModeTool } from "./planning/tools/exitPlanMode.ts";
@@ -38,6 +39,7 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 		setRunningProgressWidget: controller.moaRunHost.setRunningProgressWidget,
 	};
 	const debateHost = opinionHost;
+	const runSpec = createSpecRunner(controller);
 	const togglePlanMode = async (ctx: Parameters<typeof controller.exitPlanMode>[0], prompt?: string): Promise<void> => {
 		if (controller.questionnaireBusy(ctx)) return;
 		if (controller.getActiveCancelSession()?.run) {
@@ -68,6 +70,10 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 	pi.registerCommand("mf-debate", {
 		description: "Run a read-only multi-round debate between up to 5 models — append a topic (e.g. /mf-debate is X sound?) to skip the editor",
 		handler: async (args, ctx) => { if (controller.questionnaireBusy(ctx)) return; await runInteractiveDebate(pi, debateHost, ctx, args.trim() || undefined); },
+	});
+	pi.registerCommand("mf-spec", {
+		description: "Clarify a rough request into an approved planning brief for /mf-plan — append the request (e.g. /mf-spec add dark mode) to skip the editor",
+		handler: async (args, ctx) => runSpec(ctx, args.trim() || undefined),
 	});
 	pi.registerCommand("mf-plan-clear", {
 		description: "Clear the completed plan state so /mf-plan starts a fresh planning round (approved plans stay in .pi/mf-plan/)",
@@ -104,7 +110,7 @@ export default function mfPlanExtension(pi: ExtensionAPI): void {
 					if (fs.existsSync(repoDir)) {
 						const entries = fs.readdirSync(repoDir);
 						planFiles = entries
-							.filter((file) => file.endsWith("__plan.md") && !file.endsWith("__plan-prompt.md"))
+							.filter(isApprovedRepoPlanFilename)
 							.map((file) => {
 								const slug = file.slice(0, -"__plan.md".length);
 								const fullPath = path.join(repoDir, file);

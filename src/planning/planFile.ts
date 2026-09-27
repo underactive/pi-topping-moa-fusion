@@ -136,16 +136,46 @@ export function fallbackPlanName(): string {
 	return generateWordSlug();
 }
 
-export type RepoPlanFileKind = "plan-prompt" | "plan" | "verification" | "criteria" | "verification-handoff";
+export type RepoPlanFileKind = "plan-prompt" | "plan" | "spec" | "verification" | "criteria" | "verification-handoff";
 
 function repoPlanSuffix(kind: RepoPlanFileKind): string {
-	// `__verification` and `__criteria` never collide with the `/mf-plan-implement`
-	// scan, which matches `__plan.md` while excluding `__plan-prompt.md`.
+	// `__spec`, `__verification`, and `__criteria` never collide with the
+	// `/mf-plan-implement` scan, which matches `__plan.md` while excluding
+	// `__plan-prompt.md`.
 	if (kind === "plan-prompt") return "__plan-prompt";
+	if (kind === "spec") return "__spec";
 	if (kind === "verification") return "__verification";
 	if (kind === "criteria") return "__criteria";
 	if (kind === "verification-handoff") return "__verification-handoff";
 	return "__plan";
+}
+
+export function isApprovedRepoPlanFilename(file: string): boolean {
+	return file.endsWith("__plan.md") && !file.endsWith("__plan-prompt.md");
+}
+
+export function repoPlanDisplayPath(baseSlug: string, kind: RepoPlanFileKind): string {
+	if (!isValidPlanSlug(baseSlug)) throw new Error("Invalid repository plan slug");
+	return `${CONFIG_DIR_NAME}/mf-plan/${baseSlug}${repoPlanSuffix(kind)}.md`;
+}
+
+export function nextFreeRepoPlanSlug(repoCwd: string, baseSlug: string, kind: RepoPlanFileKind): string {
+	if (!isValidPlanSlug(baseSlug)) throw new Error("Invalid repository plan slug");
+	const planDir = getRepoPlanDirectory(repoCwd);
+	if (!fs.existsSync(path.join(planDir, `${baseSlug}${repoPlanSuffix(kind)}.md`))) return baseSlug;
+
+	for (let suffix = 2; suffix <= 20; suffix++) {
+		const suffixText = `-${suffix}`;
+		const trimmedBase = baseSlug
+			.slice(0, MAX_PLAN_SLUG_LENGTH - suffixText.length)
+			.replace(/-+$/g, "");
+		const candidate = `${trimmedBase}${suffixText}`;
+		if (
+			isValidPlanSlug(candidate)
+			&& !fs.existsSync(path.join(planDir, `${candidate}${repoPlanSuffix(kind)}.md`))
+		) return candidate;
+	}
+	return generateWordSlug();
 }
 
 /** Ensure `<CONFIG_DIR_NAME>/mf-plan/` exists in the given repo directory. */

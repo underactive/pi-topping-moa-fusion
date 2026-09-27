@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `/mf-spec`, an in-process requirements-clarification flow that asks up to five focused questions, reviews and saves approved `__spec.md` planning briefs, and prepares a `/mf-plan` handoff without exposing specs to `/mf-plan-implement`.
 - A hidden `mf-plan-verification-pending` session marker now records when an approved implementation is expected to enter independent verification. Resuming before a verifier result is recorded warns that the implementation is still unverified.
 
 ### Changed

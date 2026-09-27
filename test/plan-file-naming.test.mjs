@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { slugifyPlanName, saveRepoPlanFile, readRepoPlanFile, getRepoPlanDirectory, writeProposalFiles, cleanupProposalFiles, sweepStaleProposalFiles, getPlanFilePath, getPlansDirectory, isValidPlanSlug, resetPlanSlug, setPlanSlug, generateWordSlug } from "../src/planning/planFile.ts";
+import { slugifyPlanName, saveRepoPlanFile, readRepoPlanFile, getRepoPlanDirectory, writeProposalFiles, cleanupProposalFiles, sweepStaleProposalFiles, getPlanFilePath, getPlansDirectory, isValidPlanSlug, resetPlanSlug, setPlanSlug, generateWordSlug, isApprovedRepoPlanFilename, nextFreeRepoPlanSlug, repoPlanDisplayPath } from "../src/planning/planFile.ts";
 import { proposerBlindedLabel } from "../src/shared/modelRefs.ts";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -38,11 +38,30 @@ try {
 	const promptPath = saveRepoPlanFile("build a widget", repo, "add-cool-new-feature", "plan-prompt");
 	const planPath = saveRepoPlanFile("# Plan\n\nDo things.", repo, "add-cool-new-feature", "plan");
 	const criteriaPath = saveRepoPlanFile("## Verification Criteria", repo, "add-cool-new-feature", "criteria");
+	const specPath = saveRepoPlanFile("# Planning Brief", repo, "add-cool-new-feature", "spec");
 
 	assert.equal(promptPath, path.join(expectedPlanDirectory, "add-cool-new-feature__plan-prompt.md"));
 	assert.equal(planPath, path.join(expectedPlanDirectory, "add-cool-new-feature__plan.md"));
 	assert.equal(criteriaPath, path.join(expectedPlanDirectory, "add-cool-new-feature__criteria.md"));
+	assert.equal(specPath, path.join(expectedPlanDirectory, "add-cool-new-feature__spec.md"));
 	assert.equal(readRepoPlanFile(repo, "add-cool-new-feature", "criteria"), "## Verification Criteria");
+	assert.equal(readRepoPlanFile(repo, "add-cool-new-feature", "spec"), "# Planning Brief");
+	assert.equal(repoPlanDisplayPath("add-cool-new-feature", "spec"), `${CONFIG_DIR_NAME}/mf-plan/add-cool-new-feature__spec.md`);
+	assert.throws(() => repoPlanDisplayPath("../x", "spec"), /Invalid repository plan slug/);
+
+	assert.equal(nextFreeRepoPlanSlug(repo, "unused", "spec"), "unused");
+	saveRepoPlanFile("one", repo, "collision", "spec");
+	assert.equal(nextFreeRepoPlanSlug(repo, "collision", "spec"), "collision-2");
+	saveRepoPlanFile("two", repo, "collision-2", "spec");
+	assert.equal(nextFreeRepoPlanSlug(repo, "collision", "spec"), "collision-3");
+	const longBase = "a".repeat(100);
+	saveRepoPlanFile("long", repo, longBase, "spec");
+	assert.ok(nextFreeRepoPlanSlug(repo, longBase, "spec").length <= 100);
+
+	for (const filename of ["a__plan.md", "a__plan-prompt.md", "a__spec.md", "a__criteria.md", "a__verification.md"]) {
+		saveRepoPlanFile(filename, repo, "a", filename === "a__plan.md" ? "plan" : filename === "a__plan-prompt.md" ? "plan-prompt" : filename === "a__spec.md" ? "spec" : filename === "a__criteria.md" ? "criteria" : "verification");
+	}
+	assert.deepEqual(readdirSync(expectedPlanDirectory).filter(isApprovedRepoPlanFilename), ["a__plan.md", "add-cool-new-feature__plan.md"]);
 	assert.equal(readFileSync(promptPath, "utf8"), "build a widget");
 	assert.equal(readFileSync(planPath, "utf8"), "# Plan\n\nDo things.");
 	for (const invalid of ["../../x", "a/b", "", path.join(repo, "absolute")]) {

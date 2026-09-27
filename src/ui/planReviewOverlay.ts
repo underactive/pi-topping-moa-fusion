@@ -92,15 +92,23 @@ function formatRightRow(content: string, bodyWidth: number): string {
 	return padRow(gap > 0 ? " ".repeat(gap) + truncated : truncated, bodyWidth);
 }
 
+export interface PlanReviewLabels {
+	title?: string;
+	approveHint?: string;
+	keepHint?: string;
+	chatHint?: string;
+}
+
 export async function showPlanReview(
 	ctx: ExtensionContext,
 	planMarkdown: string,
 	moaInfo?: MfPlanInfo,
 	planName?: string,
 	allowChat = false,
+	labels?: PlanReviewLabels,
 ): Promise<PlanReviewDecision> {
 	const result = await ctx.ui.custom<PlanReviewDecision>(
-		(tui, theme, _keybindings, done) => new PlanReviewOverlay(tui, theme, planMarkdown, moaInfo, ctx.cwd, planName, allowChat, done),
+		(tui, theme, _keybindings, done) => new PlanReviewOverlay(tui, theme, planMarkdown, moaInfo, ctx.cwd, planName, allowChat, labels, done),
 		{
 			overlay: true,
 			overlayOptions: {
@@ -136,6 +144,7 @@ class PlanReviewOverlay implements Component {
 		private readonly repoCwd: string,
 		private readonly planName: string | undefined,
 		private readonly allowChat: boolean,
+		private readonly labels: PlanReviewLabels | undefined,
 		private readonly done: (decision: PlanReviewDecision) => void,
 	) {
 		this.markdown = new Markdown(stripTerminalSequences(planMarkdown), 0, 0, getMarkdownTheme());
@@ -234,9 +243,9 @@ class PlanReviewOverlay implements Component {
 			.join(",");
 		const proposalHelp = helpParts ? ` · ${helpParts} proposer plans · \`/0 synthesized` : "";
 		const verdictsHelp = this.verdictsMarkdown ? " · v verdicts" : "";
-		const chatHelp = this.allowChat ? " · c chat" : "";
+		const chatHelp = this.allowChat ? ` · c ${this.labels?.chatHint ?? "chat"}` : "";
 		const helpLines = wrapDimLine(
-			`↑/↓ or j/k scroll · u/d page${proposalHelp}${verdictsHelp} · e edit${chatHelp} · a/Enter approve · q/Esc keep planning`,
+			`↑/↓ or j/k scroll · u/d page${proposalHelp}${verdictsHelp} · e edit${chatHelp} · a/Enter ${this.labels?.approveHint ?? "approve"} · q/Esc ${this.labels?.keepHint ?? "keep planning"}`,
 			bodyWidth,
 		);
 		this.helpLineCount = helpLines.length;
@@ -261,7 +270,7 @@ class PlanReviewOverlay implements Component {
 		const planTitle = showingVerdicts
 			? "Proposer Verdicts"
 			: this.activeProposerIndex === undefined
-				? "Proposed Plan"
+				? this.labels?.title ?? "Proposed Plan"
 				: `Proposer ${this.activeProposerIndex + 1} Plan`;
 		const proposerModel = this.activeProposerIndex === undefined
 			? undefined

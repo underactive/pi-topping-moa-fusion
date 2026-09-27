@@ -16,6 +16,7 @@ A Pi extension built around **Mixture of Agents (MoA)** planning: several models
   - [The MoA Fusion table](#the-moa-fusion-table)
   - [Opinions (`/mf-opinion`)](#opinions-mf-opinion)
   - [Debates (`/mf-debate`)](#debates-mf-debate)
+  - [Specs (`/mf-spec`)](#specs-mf-spec)
 - [Commands](#commands)
   - [Cancelling running subagents](#cancelling-running-subagents)
 - [Plan Mode](#plan-mode)
@@ -152,6 +153,19 @@ During the run, `F3` opens the live observer and `Esc` or `F4` opens cancellatio
 
 During the run, `F3` opens the live observer and `Esc` or `F4` opens cancellation controls. The prompt and combined transcript are saved under `.pi/mf-debate/` as `<slug>__debate-prompt.md` and `<slug>__debate.md`.
 
+### Specs (`/mf-spec`)
+
+`/mf-spec` follows a separate requirements workflow: rough request → clarification → approved planning brief → a user-started `/mf-plan`.
+
+1. Enter a request directly (`/mf-spec add dark mode`) or use the prompt editor.
+2. It asks up to five adaptive clarifying questions, stopping early when it has enough context. Each question names the area it affects: scope, UX, architecture, acceptance criteria, or testing.
+3. Press **Esc** during clarification to choose whether to draft from the answers so far or cancel; cancelling saves nothing.
+4. Review the draft and approve and save it, edit it directly, or revise it with feedback. Nothing is written before approval.
+5. The approved brief is saved as `.pi/mf-plan/<slug>__spec.md`. `/mf-plan-implement` ignores these files because they are specifications, not approved `__plan.md` implementation plans.
+6. After saving, a ready-to-run `/mf-plan …` handoff is placed in the input box when it is empty; review it and press Enter to start planning. Existing input is never overwritten, and `/mf-spec` refuses to run while plan mode is active.
+
+Clarification and drafting run in-process on the active session model with no tools or repository access. Repo-grounded planning begins only when you run the prepared `/mf-plan` command.
+
 ## Commands
 
 | Command | Shortcut | Description |
@@ -159,6 +173,7 @@ During the run, `F3` opens the live observer and `Esc` or `F4` opens cancellatio
 | `/mf-plan` | — | Toggle plan mode on/off |
 | `/mf-opinion` | — | Ask 1–5 models for independent read-only opinions about the repository |
 | `/mf-debate` | — | Run a read-only multi-round debate between up to 5 models |
+| `/mf-spec` | — | Clarify a rough request into an approved planning brief and prepare a `/mf-plan` handoff |
 | `/mf-preview` | — | Toggle the inline/live preview of streamed agent output |
 | `/mf-plan-settings` | — | Configure the explore and cheap/fast agents, named agent rosters for the MoA roles, plan options, and max concurrent agents |
 | `/mf-plan-implement` | — | Retry implementation of the last approved MoA plan, optionally with a different model |
@@ -328,7 +343,7 @@ The slug is a generated adjective-adjective-noun triple (e.g. `happy-mellifluous
 
 ## Non-Interactive Behavior
 
-In non-interactive modes (`pi -p`, `--mode json`), `exit_plan_mode` is rejected unless `MOA_PLAN_AUTO_APPROVE=1` is set. With that explicit opt-in, it exits plan mode and hands the plan back without prompting. The plan file is still written to disk.
+In non-interactive modes (`pi -p`, `--mode json`), `exit_plan_mode` is rejected unless `MOA_PLAN_AUTO_APPROVE=1` is set. With that explicit opt-in, it exits plan mode and hands the plan back without prompting. The plan file is still written to disk. `/mf-spec <request>` likewise requires `MOA_PLAN_AUTO_APPROVE=1`; with it, the command skips questions and review, generates and saves the brief, and prints the `/mf-plan` handoff, while without it no model call or file write occurs.
 
 ## How It Works (Architecture)
 
@@ -370,6 +385,9 @@ src/
 │   ├── debateRounds.ts      # Survivor/early-stop/next-round bookkeeping
 │   ├── debateResults.ts     # Outcome collection and debate transcript markdown
 │   └── debateFile.ts        # Repo-local debate artifacts
+├── spec/
+│   ├── specContract.ts      # Clarification/brief contracts, parsing, and handoff helpers
+│   └── runSpec.ts           # Interactive/headless /mf-spec state machine
 ├── planning/
 │   ├── planMode.ts          # Plan-mode state transitions and lifecycle handlers
 │   ├── modeState.ts         # Persisted state shape, byte cap, append deduplication
@@ -453,6 +471,7 @@ Ported from Claude Code's plan mode, adapted to pi's extension primitives:
 | `FileEditTool`/`FileWriteTool` guarded | Custom `write_plan` tool | Safer single-writable-file invariant |
 | Subscription-tier agent counts | Hardcoded constants (3/1) | Bumpable via code change |
 | Plan-length A/B experiment | Standard Phase 4 | Experiment noise skipped |
+| Spec Kit / brainstorming | `/mf-spec` | Requirements clarification only |
 | Interview phase variant | Standard 5-phase workflow | Variant skipped |
 
 ## License
