@@ -14,6 +14,7 @@
 
 ### Fixed
 
+- An assigned slot in the MoA Fusion Pre-flight overview can now be cleared back to `(none)` with Backspace or Delete. Previously a slot could only be reassigned to another model, never emptied.
 - Reusable `[PLAN MODE ACTIVE]` and `[PLAN MODE RE-ENTRY]` instruction entries are now durably omitted with settle-boundary null context edits after plan-mode exit, preventing later compaction from carrying stale plan instructions into implementation.
 - Custom OpenAI-compatible endpoints used by proposers and verifiers now benefit from pi 0.87's upstream strict-schema capability fix: unknown endpoints no longer receive strict tool schemas unless they explicitly advertise support.
 - Saving or deleting an agent roster now takes effect immediately, without requiring a second save from the main settings overlay.

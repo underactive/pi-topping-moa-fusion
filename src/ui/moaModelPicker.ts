@@ -8,7 +8,8 @@
  * starting unassigned at `(none)`, plus a Load Roster row that applies a saved
  * roster to every slot wholesale, and a Start fan-out action. Enter on a slot
  * opens its two-pane model/thinking picker; confirming writes only that slot
- * and returns to the overview, cancelling returns without changing it. The
+ * and returns to the overview, cancelling returns without changing it.
+ * Backspace or Delete on a slot clears it back to `(none)`. The
  * overview's "Start fan-out" action stays visually disabled until at least two
  * proposer slots and all three required roles are assigned, then it finishes
  * the picker.
@@ -213,7 +214,7 @@ class MoaModelPickerComponent implements Component {
 		return undefined;
 	}
 
-	private setRole(role: "synthesizer" | "implementer" | "verifier", ref: ModelRef, thinking: ThinkingLevel): void {
+	private setRole(role: "synthesizer" | "implementer" | "verifier", ref: ModelRef | undefined, thinking: ThinkingLevel | undefined): void {
 		if (role === "synthesizer") { this.synthesizerRef = ref; this.synthesizerThinking = thinking; }
 		else if (role === "implementer") { this.implementerRef = ref; this.implementerThinking = thinking; }
 		else { this.verifierRef = ref; this.verifierThinking = thinking; }
@@ -237,6 +238,18 @@ class MoaModelPickerComponent implements Component {
 			this.proposerThinking[this.screen - 1] = thinking;
 		}
 		this.screen = CONFIRM_SCREEN;
+		this.tui.requestRender();
+	}
+
+	/** Return a slot to `(none)`; the overview cursor stays on its row. */
+	private clearSlot(screen: number): void {
+		const role = this.nonProposerRole(screen);
+		if (role) {
+			this.setRole(role, undefined, undefined);
+		} else {
+			this.proposerRefs[screen - 1] = undefined;
+			this.proposerThinking[screen - 1] = undefined;
+		}
 		this.tui.requestRender();
 	}
 
@@ -429,6 +442,11 @@ class MoaModelPickerComponent implements Component {
 				// A disabled Start swallows Enter with no state change.
 				return;
 			}
+			if (matchesKey(data, Key.backspace) || matchesKey(data, Key.delete)) {
+				// Load Roster and Start have nothing to clear; every other row is a slot.
+				if (this.confirmIndex !== LOAD_ROW && this.confirmIndex !== START_ROW) this.clearSlot(this.confirmIndex);
+				return;
+			}
 			if (matchesKey(data, Key.escape)) {
 				// Back to the mode chooser; assignments are preserved.
 				this.screen = 0;
@@ -604,7 +622,7 @@ class MoaModelPickerComponent implements Component {
 				sepBorder,
 				...reviewRows,
 				sepBorder,
-				row(th.fg("dim", "\u2191\u2193 navigate \u2022 enter select \u2022 esc back")),
+				row(th.fg("dim", "\u2191\u2193 navigate \u2022 enter select \u2022 \u232B clear \u2022 esc back")),
 				botBorder,
 			];
 			if (lines.length <= viewport) return lines;

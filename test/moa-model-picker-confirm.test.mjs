@@ -22,6 +22,8 @@ const ENTER = "\r";
 const ESCAPE = "\u001b";
 const UP = "\u001b[A";
 const DOWN = "\u001b[B";
+const BACKSPACE = "\u007f";
+const DELETE = "\u001b[3~";
 const POINTER = ">";
 
 // Overview row indices — Load Roster, then proposers, the three required
@@ -400,6 +402,67 @@ try {
 			},
 		}, "medium");
 	}
+
+	// ---------------------------------------------------------------------
+	// Journey 3d: Backspace or Delete returns an assigned slot to `(none)`.
+	// Readiness drops with it, the cleared slot never reaches the result, and
+	// re-opening it highlights the default rather than the cleared pick.
+	// ---------------------------------------------------------------------
+	const clearedResult = await showMoaModelPicker(makePickerCtx((component) => {
+		const { text, rowFor } = makeViews(component);
+		component.handleInput(ENTER); // MoA → overview
+		assert.match(text(), /⌫ clear/, "the overview hints must advertise the clear key");
+		const nav = overview(component);
+		nav.assign(ROW.P1, { filter: "haiku", thinking: "high" });
+		nav.assign(ROW.P2, "opus");
+		nav.assign(ROW.P3, { filter: "haiku", thinking: "low" });
+		nav.assign(ROW.SYNTH, "haiku");
+		nav.assign(ROW.IMPL);
+		nav.assign(ROW.VERIF);
+		assert.doesNotMatch(rowFor("Start fan-out"), /needs/);
+
+		// Backspace clears the focused proposer; the cursor stays on its row.
+		nav.move(ROW.P1);
+		component.handleInput(BACKSPACE);
+		assert.match(rowFor("Proposer 1"), /\(none\)/, "backspace must clear the focused slot");
+		assert.doesNotMatch(rowFor("Proposer 1"), /thinking:/, "a cleared slot drops its thinking suffix");
+		assert.match(rowFor("Proposer 1"), new RegExp(POINTER), "the cursor stays on the cleared row");
+		assert.match(rowFor("Proposer 2"), /anthropic\/claude-opus-4-6/, "clearing leaves sibling slots alone");
+		assert.doesNotMatch(rowFor("Start fan-out"), /needs/, "two proposers remain, so Start stays enabled");
+
+		// Delete clears a required role, and Start reports it missing again.
+		nav.move(ROW.SYNTH);
+		component.handleInput(DELETE);
+		assert.match(rowFor("Synthesizer"), /\(none\)/, "delete must clear the focused slot");
+		assert.match(rowFor("Start fan-out"), /needs synthesizer/);
+
+		// Clearing an empty slot, Load Roster, or Start changes nothing.
+		nav.move(ROW.P4);
+		component.handleInput(BACKSPACE);
+		nav.move(ROW.LOAD);
+		component.handleInput(BACKSPACE);
+		nav.move(ROW.START);
+		component.handleInput(DELETE);
+		assert.match(text(), /MoA Fusion Pre-flight/, "clear keys must not leave the overview");
+		assert.match(rowFor("Proposer 4"), /\(none\)/);
+		assert.match(rowFor("Proposer 3"), /anthropic\/claude-haiku-4-5 · thinking: low/);
+		assert.match(rowFor("Verifier"), /anthropic\/claude-opus-4-6/);
+		assert.match(rowFor("Start fan-out"), /needs synthesizer/);
+
+		// The cleared synthesizer re-opens on the default highlight (opus, the
+		// active model), not the haiku it held before clearing.
+		nav.assign(ROW.SYNTH);
+		assert.match(rowFor("Synthesizer"), /anthropic\/claude-opus-4-6/, "a cleared slot must re-open as empty");
+		nav.start();
+	}), "medium");
+	assert.equal(clearedResult.mode, "moa");
+	// The cleared Proposer 1 never reaches the result; the survivors keep their own thinking.
+	assert.deepEqual(clearedResult.proposers, [
+		{ provider: "anthropic", id: "claude-opus-4-6" },
+		{ provider: "anthropic", id: "claude-haiku-4-5" },
+	]);
+	assert.deepEqual(clearedResult.proposerThinking, ["medium", "low"]);
+	assert.deepEqual(clearedResult.synthesizer, { provider: "anthropic", id: "claude-opus-4-6" });
 
 	// ---------------------------------------------------------------------
 	// Journey 4: saved configuration only seeds highlights — the overview still
