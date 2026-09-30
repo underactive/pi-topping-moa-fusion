@@ -131,11 +131,6 @@ export function slugifyPlanName(text: string): string {
 	return trySlugifyPlanName(text) ?? generateWordSlug();
 }
 
-/** Fallback slug when LLM summarization is unavailable. */
-export function fallbackPlanName(): string {
-	return generateWordSlug();
-}
-
 export type RepoPlanFileKind = "plan-prompt" | "plan" | "spec" | "verification" | "criteria" | "verification-handoff";
 
 function repoPlanSuffix(kind: RepoPlanFileKind): string {
