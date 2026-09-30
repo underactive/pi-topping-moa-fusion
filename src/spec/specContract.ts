@@ -13,6 +13,8 @@ export const SPEC_QUESTION_AREAS = [
 
 export type SpecQuestionArea = (typeof SPEC_QUESTION_AREAS)[number];
 
+const SPEC_AREAS_OR_LIST = `${SPEC_QUESTION_AREAS.slice(0, -1).join(", ")}, or ${SPEC_QUESTION_AREAS.at(-1)}`;
+
 export interface SpecAnswer {
 	question: string;
 	area: SpecQuestionArea;
@@ -47,7 +49,7 @@ export const SPEC_SYSTEM_PROMPT = [
 ].join(" ");
 
 const SPEC_QUESTION_RETRY_HEADER =
-	"IMPORTANT: Your previous output did not follow the clarification protocol. Reply with exactly one question under `## Question` followed by an `Affects:` line naming scope, UX, architecture, acceptance criteria, or testing; or reply with `## Ready` as the first non-blank line. Do not add prose outside that format.";
+	`IMPORTANT: Your previous output did not follow the clarification protocol. Reply with exactly one question under \`## Question\` followed by an \`Affects:\` line naming ${SPEC_AREAS_OR_LIST}; or reply with \`## Ready\` as the first non-blank line. Do not add prose outside that format.`;
 
 function renderAnswers(answers: SpecAnswer[]): string {
 	if (answers.length === 0) return "(none)";
@@ -79,9 +81,9 @@ export function buildQuestionTask(input: {
 		renderAnswers(input.answers),
 		"",
 		`Remaining question allowance: ${remaining} of ${MAX_SPEC_QUESTIONS}.`,
-		"Ask at most one question, and only when its answer would materially change scope, UX, architecture, acceptance criteria, or testing.",
+		`Ask at most one question, and only when its answer would materially change ${SPEC_AREAS_OR_LIST}.`,
 		"Do not ask about anything settled by the request or earlier answers. Do not ask about code details that a planner can discover in the repository. Prefer `## Ready` when unsure.",
-		"If a question is needed, make the first non-blank line `## Question`, put one question of at most three sentences beneath it, and then write `Affects: <scope | UX | architecture | acceptance criteria | testing>`.",
+		`If a question is needed, make the first non-blank line \`## Question\`, put one question of at most three sentences beneath it, and then write \`Affects: <${SPEC_QUESTION_AREAS.join(" | ")}>\`.`,
 		"If no material clarification is needed, make the first non-blank line `## Ready`. Emit no other prose.",
 	].join("\n");
 }
