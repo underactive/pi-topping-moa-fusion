@@ -139,15 +139,7 @@ export function fallbackPlanName(): string {
 export type RepoPlanFileKind = "plan-prompt" | "plan" | "spec" | "verification" | "criteria" | "verification-handoff";
 
 function repoPlanSuffix(kind: RepoPlanFileKind): string {
-	// `__spec`, `__verification`, and `__criteria` never collide with the
-	// `/mf-plan-implement` scan, which matches `__plan.md` while excluding
-	// `__plan-prompt.md`.
-	if (kind === "plan-prompt") return "__plan-prompt";
-	if (kind === "spec") return "__spec";
-	if (kind === "verification") return "__verification";
-	if (kind === "criteria") return "__criteria";
-	if (kind === "verification-handoff") return "__verification-handoff";
-	return "__plan";
+	return `__${kind}`;
 }
 
 export function isApprovedRepoPlanFilename(file: string): boolean {
