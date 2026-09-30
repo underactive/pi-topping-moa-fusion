@@ -169,13 +169,13 @@ export function buildBriefTask(input: {
 
 	parts.push(
 		"",
-		"Output exactly these eleven level-two headings, in this order, with no text before the first heading:",
+		`Output exactly these ${SPEC_BRIEF_SECTIONS.length} level-two headings, in this order, with no text before the first heading:`,
 		...SPEC_BRIEF_SECTIONS.map((heading, index) => `${index + 1}. \`## ${heading}\``),
 		"",
 		"Every section body must be non-empty. Use `None identified.` when there is nothing substantive to record.",
 		"Acceptance criteria must be observable and include testing expectations.",
 		"The final `## Planning prompt for /mf-plan` section must contain exactly one fenced block holding a self-contained, imperative planning prompt. The prompt must restate the goal, scope, non-goals, acceptance criteria, and constraints so a planner with no other context can act on it. It must not start with `/mf-plan`.",
-		"Return only the eleven sections. Do not add a title, preamble, commentary, or content after the final section.",
+		`Return only the ${SPEC_BRIEF_SECTIONS.length} sections. Do not add a title, preamble, commentary, or content after the final section.`,
 	);
 	return parts.join("\n");
 }
@@ -235,7 +235,7 @@ const SPEC_BRIEF_RETRY_PREFIX =
 
 export function buildBriefRetryTask(task: string, previousOutput: string, missing: string[]): string {
 	const missingList = missing.length > 0 ? missing.map((heading) => `\`${heading}\``).join(", ") : "the required sections";
-	const header = `${SPEC_BRIEF_RETRY_PREFIX} Missing or empty section(s): ${missingList}. Re-emit the COMPLETE brief with all eleven required headings in order, non-empty bodies, and no prose outside the brief.`;
+	const header = `${SPEC_BRIEF_RETRY_PREFIX} Missing or empty section(s): ${missingList}. Re-emit the COMPLETE brief with all ${SPEC_BRIEF_SECTIONS.length} required headings in order, non-empty bodies, and no prose outside the brief.`;
 	return [task, "", "---", "", buildRetryCorrection(header, previousOutput)].join("\n");
 }
 

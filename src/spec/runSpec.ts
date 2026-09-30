@@ -206,7 +206,7 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 		}
 		if (next.kind === "ready") break;
 		if (answers.some((answer) => answer.question.toLowerCase() === next.question.toLowerCase())) break;
-		const answer = await ctx.ui.editor(`Q${answers.length + 1}/5 · ${next.area} — ${next.question}`);
+		const answer = await ctx.ui.editor(`Q${answers.length + 1}/${MAX_SPEC_QUESTIONS} · ${next.area} — ${next.question}`);
 		if (answer === undefined) {
 			if (!await shouldDraftAfterInterrupt(ctx)) return;
 			break;
