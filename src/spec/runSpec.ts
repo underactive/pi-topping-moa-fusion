@@ -38,7 +38,7 @@ export interface SpecHost {
 
 type ModelReply = { ok: true; text: string } | { ok: false; error: string };
 
-export async function askSpecModel(
+async function askSpecModel(
 	ctx: ExtensionContext,
 	host: SpecHost,
 	task: string,
