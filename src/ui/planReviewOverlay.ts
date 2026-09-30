@@ -71,16 +71,15 @@ function formatProposersList(proposers: ModelRef[]): string {
 }
 
 function formatSplitRow(left: string, right: string | undefined, bodyWidth: number): string {
-	const leftText = left ?? "";
 	if (!right) {
-		return padRow(leftText, bodyWidth);
+		return padRow(left, bodyWidth);
 	}
 
-	const minLeft = Math.min(visibleWidth(leftText), 18);
+	const minLeft = Math.min(visibleWidth(left), 18);
 	const maxRight = Math.max(1, bodyWidth - minLeft);
 	const rightPart = truncateToWidth(right, maxRight, "…", false);
 	const rightVis = visibleWidth(rightPart);
-	const leftPart = truncateToWidth(leftText, Math.max(1, bodyWidth - rightVis), "…", false);
+	const leftPart = truncateToWidth(left, Math.max(1, bodyWidth - rightVis), "…", false);
 	const gap = bodyWidth - visibleWidth(leftPart) - visibleWidth(rightPart);
 	const row = gap > 0 ? leftPart + " ".repeat(gap) + rightPart : leftPart + rightPart;
 	return padRow(row, bodyWidth);
