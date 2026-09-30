@@ -709,7 +709,7 @@ test("opening a failed save to copy it returns to the failure menu without repor
 	const harness = createHarness({
 		repo,
 		specReplies: [READY, validBrief()],
-		namingReplies: ["add dark mode toggle", "add dark mode toggle"],
+		namingReplies: ["add dark mode toggle"],
 		reviewDecisions: ["approve"],
 		editorReplies: [undefined],
 		selectReplies: ["Open the brief in an editor to copy it", "Discard"],
@@ -718,6 +718,7 @@ test("opening a failed save to copy it returns to the failure menu without repor
 	await run(harness);
 
 	assert.equal(harness.selectCalls.length, 2);
+	assert.deepEqual(harness.remaining.namingReplies, []);
 	assert.deepEqual(harness.insertedEditorText, []);
 	assert.doesNotMatch(messages(harness), /Planning brief saved to/);
 });

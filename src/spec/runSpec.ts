@@ -288,14 +288,14 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 			continue;
 		}
 
+		const named = await withWorkingOverlay(
+			ctx,
+			planNamingOverlay("spec", () => slugifyPlanName(request)),
+			(signal) => summarizePlanPromptName(ctx, request, { signal }),
+		);
 		let savedSlug: string | undefined;
 		while (!savedSlug) {
 			try {
-				const named = await withWorkingOverlay(
-					ctx,
-					planNamingOverlay("spec", () => slugifyPlanName(request)),
-					(signal) => summarizePlanPromptName(ctx, request, { signal }),
-				);
 				const candidate = nextFreeRepoPlanSlug(ctx.cwd, named, "spec");
 				saveRepoPlanFile(artifact, ctx.cwd, candidate, "spec");
 				savedSlug = candidate;
