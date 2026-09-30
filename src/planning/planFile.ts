@@ -176,7 +176,7 @@ export function getRepoPlanDirectory(repoCwd: string): string {
 	return planDir;
 }
 
-/** Save content to `<CONFIG_DIR_NAME>/mf-plan/<slug>__plan-prompt.md` or `<slug>__plan.md`. Returns the file path. */
+/** Save content to `<CONFIG_DIR_NAME>/mf-plan/<slug>__<kind>.md` for the given kind. Returns the file path. */
 export function saveRepoPlanFile(
 	content: string,
 	repoCwd: string,
