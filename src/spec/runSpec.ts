@@ -223,6 +223,12 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 	const warnMissing = (missing: string[]) => {
 		if (missing.length) ctx.ui.notify(`Brief is missing: ${missing.join(", ")}; edit or revise it before approving.`, "warning");
 	};
+	const editBrief = async (title: string, current: string): Promise<string> => {
+		const edited = await ctx.ui.editor(title, current);
+		if (!edited?.trim()) return current;
+		warnMissing(missingSpecSections(edited));
+		return edited;
+	};
 	let revisions = 0;
 	let artifact: string | undefined;
 	while (!artifact) {
@@ -247,11 +253,7 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 				chatHint: "revise",
 			});
 		} else {
-			const edited = await ctx.ui.editor("Planning Brief — review or edit, then submit", artifact);
-			if (edited?.trim()) {
-				artifact = edited;
-				warnMissing(missingSpecSections(artifact));
-			}
+			artifact = await editBrief("Planning Brief — review or edit, then submit", artifact);
 			const options = ["Approve — save the brief", ...(revisions < MAX_SPEC_REVISIONS ? ["Revise with feedback"] : []), "Discard — nothing is saved"];
 			const choice = await ctx.ui.select("Save this planning brief?", options);
 			decision = choice?.startsWith("Approve") ? "approve" : choice?.startsWith("Revise") ? "chat" : "keep";
@@ -262,11 +264,7 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 		}
 
 		if (decision === "edit") {
-			const edited = await ctx.ui.editor("Edit Planning Brief", artifact);
-			if (edited?.trim()) {
-				artifact = edited;
-				warnMissing(missingSpecSections(artifact));
-			}
+			artifact = await editBrief("Edit Planning Brief", artifact);
 			continue;
 		}
 		if (decision === "chat") {
