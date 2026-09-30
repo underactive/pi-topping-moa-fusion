@@ -188,18 +188,26 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 			if (!await shouldDraftAfterInterrupt(ctx)) return;
 			break;
 		}
-		let next = reply.ok ? parseNextStep(reply.text) : { kind: "malformed" as const };
-		if (reply.ok && next.kind === "malformed") {
+		const giveUp = (detail: string) => ctx.ui.notify(`Could not get a clarifying question: ${detail}; drafting with the answers so far.`, "warning");
+		if (!reply.ok) {
+			giveUp(reply.error);
+			break;
+		}
+		let next = parseNextStep(reply.text);
+		if (next.kind === "malformed") {
 			reply = await ask(buildQuestionRetryTask(task, reply.text));
 			if (reply === STOP) {
 				if (!await shouldDraftAfterInterrupt(ctx)) return;
 				break;
 			}
-			next = reply.ok ? parseNextStep(reply.text) : { kind: "malformed" as const };
+			if (!reply.ok) {
+				giveUp(reply.error);
+				break;
+			}
+			next = parseNextStep(reply.text);
 		}
-		if (!reply.ok || next.kind === "malformed") {
-			const detail = reply.ok ? "malformed reply" : reply.error;
-			ctx.ui.notify(`Could not get a clarifying question: ${detail}; drafting with the answers so far.`, "warning");
+		if (next.kind === "malformed") {
+			giveUp("malformed reply");
 			break;
 		}
 		if (next.kind === "ready") break;
