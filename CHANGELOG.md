@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0]
+
 ### Added
 
 - Added `/mf-spec`, an in-process requirements-clarification flow that asks up to five focused questions, reviews and saves approved `__spec.md` planning briefs, and prepares a `/mf-plan` handoff without exposing specs to `/mf-plan-implement`.
