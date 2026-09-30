@@ -146,7 +146,6 @@ function createHarness(options = {}) {
 	const selectCalls = [];
 	const customCalls = [];
 	const insertedEditorText = [];
-	let sendUserMessageCalls = 0;
 	let workingOverlayEscapes = options.workingOverlayEscapes ?? 0;
 	const model = { provider: "fake", id: "spec-model" };
 	const state = {
@@ -245,9 +244,6 @@ function createHarness(options = {}) {
 	};
 	const ctx = {
 		hasUI: options.hasUI ?? true,
-		// The real method lives on ExtensionAPI, which createSpecRunner never receives;
-		// retain a runtime tripwire so any accidental context call fails coverage.
-		sendUserMessage: () => { sendUserMessageCalls++; },
 		mode: options.mode ?? "tui",
 		cwd: repo,
 		model,
@@ -276,7 +272,6 @@ function createHarness(options = {}) {
 		selectCalls,
 		customCalls,
 		insertedEditorText,
-		get sendUserMessageCalls() { return sendUserMessageCalls; },
 		remaining: { specReplies, namingReplies, editorReplies, selectReplies, reviewDecisions, promptReplies },
 	};
 }
@@ -318,7 +313,6 @@ test("normal flow asks adaptive questions, saves only the reviewed spec, and pre
 	assert.match(reviewedArtifact, /Theme persistence and both visual states\./);
 	assert.deepEqual(artifactNames(harness.repo), [`${SPEC_SLUG}__spec.md`]);
 	assert.equal(artifactNames(harness.repo).some((name) => name.endsWith("__plan.md")), false);
-	assert.equal(harness.sendUserMessageCalls, 0);
 	assert.equal(harness.insertedEditorText.length, 1);
 	assert.match(harness.insertedEditorText[0], /^\/mf-plan /);
 	assert.match(harness.insertedEditorText[0], new RegExp(`${SPEC_SLUG}__spec\\.md`));
