@@ -138,7 +138,7 @@ function repoPlanSuffix(kind: RepoPlanFileKind): string {
 }
 
 export function isApprovedRepoPlanFilename(file: string): boolean {
-	return file.endsWith("__plan.md") && !file.endsWith("__plan-prompt.md");
+	return file.endsWith("__plan.md");
 }
 
 export function repoPlanDisplayPath(baseSlug: string, kind: RepoPlanFileKind): string {
