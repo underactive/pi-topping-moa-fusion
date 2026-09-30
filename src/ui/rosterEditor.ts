@@ -31,8 +31,6 @@ import { ratioViewport } from "./chrome.ts";
 import { MenuComponent, showOverlayPrompt, type ActionMenuItem } from "./menu.ts";
 import { showModelThinkingPicker } from "./moaModelPicker.ts";
 
-const BACKSPACE = "\x7f";
-
 type SlotRole = "synthesizer" | "implementer" | "verifier";
 type SlotTarget = { kind: "proposer"; index: number } | { kind: "role"; role: SlotRole };
 type ListResult = { action: "create" } | { action: "edit"; index: number } | { action: "back" };
@@ -198,7 +196,7 @@ function showSlotEditor(ctx: ExtensionContext, draft: DraftRoster, focusItemId: 
 					{ title: "roles", items: roleItems },
 				],
 				onItemKey: (item, data) => {
-					if (data !== BACKSPACE && data !== "\b" && !matchesKey(data, Key.delete)) return false;
+					if (!matchesKey(data, Key.backspace) && !matchesKey(data, Key.delete)) return false;
 					const target = parseTargetItemId(item.id);
 					if (!target) return true;
 					if (target.kind === "proposer") working.proposers[target.index] = undefined;
