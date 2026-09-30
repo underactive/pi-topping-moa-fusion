@@ -220,13 +220,16 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 		answers.push({ question: next.question, area: next.area, answer: answer.trim() });
 	}
 
+	const warnMissing = (missing: string[]) => {
+		if (missing.length) ctx.ui.notify(`Brief is missing: ${missing.join(", ")}; edit or revise it before approving.`, "warning");
+	};
 	let revisions = 0;
 	let artifact: string | undefined;
 	while (!artifact) {
 		const drafted = await requestDraft(ctx, host, request, answers);
 		if (drafted.artifact) {
 			artifact = drafted.artifact;
-			if (drafted.missing?.length) ctx.ui.notify(`Brief is missing: ${drafted.missing.join(", ")}; edit or revise it before approving.`, "warning");
+			warnMissing(drafted.missing ?? []);
 			break;
 		}
 		if (!drafted.cancelled) ctx.ui.notify(`The brief could not be drafted: ${drafted.error ?? "empty reply"}`, "error");
@@ -247,8 +250,7 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 			const edited = await ctx.ui.editor("Planning Brief — review or edit, then submit", artifact);
 			if (edited?.trim()) {
 				artifact = edited;
-				const missing = missingSpecSections(artifact);
-				if (missing.length) ctx.ui.notify(`Brief is missing: ${missing.join(", ")}.`, "warning");
+				warnMissing(missingSpecSections(artifact));
 			}
 			const options = ["Approve — save the brief", ...(revisions < MAX_SPEC_REVISIONS ? ["Revise with feedback"] : []), "Discard — nothing is saved"];
 			const choice = await ctx.ui.select("Save this planning brief?", options);
@@ -263,8 +265,7 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 			const edited = await ctx.ui.editor("Edit Planning Brief", artifact);
 			if (edited?.trim()) {
 				artifact = edited;
-				const missing = missingSpecSections(artifact);
-				if (missing.length) ctx.ui.notify(`Brief is missing: ${missing.join(", ")}.`, "warning");
+				warnMissing(missingSpecSections(artifact));
 			}
 			continue;
 		}
@@ -282,7 +283,7 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 				continue;
 			}
 			artifact = revised.artifact;
-			if (revised.missing?.length) ctx.ui.notify(`Brief is missing: ${revised.missing.join(", ")}; edit or revise it before approving.`, "warning");
+			warnMissing(revised.missing ?? []);
 			continue;
 		}
 		if (decision === "keep") {
