@@ -270,7 +270,7 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 			const feedback = (await showPromptEditor(ctx, "Revise the brief — what should change?"))?.trim();
 			if (!feedback) continue;
 			revisions++;
-			const revised = await requestDraft(ctx, host, request, answers, { revision: { previousBrief: artifact, feedback } });
+			const revised = await requestDraft(ctx, host, request, answers, { revision: { previousBrief: normalizeBrief(artifact), feedback } });
 			if (!revised.artifact) {
 				ctx.ui.notify(`Could not revise the planning brief: ${revised.error ?? "cancelled"}; keeping the previous brief.`, "error");
 				continue;
