@@ -236,7 +236,7 @@ const SPEC_BRIEF_RETRY_PREFIX =
 	"IMPORTANT: Your previous planning brief did not satisfy the required Markdown contract.";
 
 export function buildBriefRetryTask(task: string, previousOutput: string, missing: string[]): string {
-	const missingList = missing.length > 0 ? missing.map((heading) => `\`${heading}\``).join(", ") : "the required sections";
+	const missingList = missing.map((heading) => `\`${heading}\``).join(", ");
 	const header = `${SPEC_BRIEF_RETRY_PREFIX} Missing or empty section(s): ${missingList}. Re-emit the COMPLETE brief with all ${SPEC_BRIEF_SECTIONS.length} required headings in order, non-empty bodies, and no prose outside the brief.`;
 	return [task, "", "---", "", buildRetryCorrection(header, previousOutput)].join("\n");
 }
