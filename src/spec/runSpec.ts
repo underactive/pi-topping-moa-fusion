@@ -23,7 +23,6 @@ import {
 	buildQuestionRetryTask,
 	buildQuestionTask,
 	buildSpecArtifact,
-	extractPlanningPrompt,
 	missingSpecSections,
 	normalizeBrief,
 	parseNextStep,
@@ -158,8 +157,7 @@ async function runHeadless(ctx: ExtensionContext, host: SpecHost, request: strin
 		const slug = nextFreeRepoPlanSlug(ctx.cwd, slugifyPlanName(request), "spec");
 		saveRepoPlanFile(drafted.artifact, ctx.cwd, slug, "spec");
 		const displayPath = repoPlanDisplayPath(slug, "spec");
-		const prompt = extractPlanningPrompt(drafted.artifact) ?? `Plan the implementation described in the approved planning brief at ${displayPath}.`;
-		ctx.ui.notify(`Planning brief saved to ${displayPath}\n\n${buildPlanHandoff(prompt, displayPath)}`);
+		ctx.ui.notify(`Planning brief saved to ${displayPath}\n\n${buildPlanHandoff(drafted.artifact, displayPath)}`);
 	} catch (error) {
 		ctx.ui.notify(`Could not save the planning brief: ${error instanceof Error ? error.message : String(error)}`, "error");
 	}
@@ -312,8 +310,7 @@ async function runInteractive(ctx: ExtensionContext, host: SpecHost, initialRequ
 		}
 
 		const displayPath = repoPlanDisplayPath(savedSlug, "spec");
-		const prompt = extractPlanningPrompt(artifact) ?? `Plan the implementation described in the approved planning brief at ${displayPath}.`;
-		const handoff = buildPlanHandoff(prompt, displayPath);
+		const handoff = buildPlanHandoff(artifact, displayPath);
 		if (ctx.mode === "tui") {
 			if (ctx.ui.getEditorText().trim() === "") {
 				ctx.ui.setEditorText(handoff);

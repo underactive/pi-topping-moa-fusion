@@ -318,6 +318,7 @@ export function extractPlanningPrompt(markdown: string): string | undefined {
 	return stripPlanCommand(firstFencedBlock(body) ?? body.join("\n"));
 }
 
-export function buildPlanHandoff(prompt: string, displayPath: string): string {
+export function buildPlanHandoff(artifact: string, displayPath: string): string {
+	const prompt = extractPlanningPrompt(artifact) ?? `Plan the implementation described in the approved planning brief at ${displayPath}.`;
 	return `/mf-plan ${prompt.trim()}\n\nFull approved planning brief: ${displayPath}`;
 }

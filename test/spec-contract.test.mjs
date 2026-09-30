@@ -215,9 +215,14 @@ const noQuestionsArtifact = buildSpecArtifact({
 });
 assert.match(noQuestionsArtifact, /_No clarifying questions were asked\._/);
 
-const handoff = buildPlanHandoff("Plan the implementation and tests.", ".pi/mf-plan/dark-mode__spec.md");
+const handoff = buildPlanHandoff("## Planning prompt for /mf-plan\n\nPlan the implementation and tests.", ".pi/mf-plan/dark-mode__spec.md");
 assert.ok(handoff.startsWith("/mf-plan Plan the implementation and tests."));
 assert.match(handoff, /Full approved planning brief: \.pi\/mf-plan\/dark-mode__spec\.md/);
+assert.ok(
+	buildPlanHandoff("## Request summary\nNothing else.", ".pi/mf-plan/x__spec.md").startsWith(
+		"/mf-plan Plan the implementation described in the approved planning brief at .pi/mf-plan/x__spec.md.",
+	),
+);
 
 // Retry tasks retain the original task, quote prior output safely, and explain the correction.
 const questionRetry = buildQuestionRetryTask("original question task", 'bad """ question output');
