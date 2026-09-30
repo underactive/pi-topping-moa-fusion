@@ -24,13 +24,13 @@
  * by hand.
  */
 
-import { CONFIG_DIR_NAME, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 import { loadMoaConfig } from "../config/settings.ts";
 import { installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../agents/authoritative.ts";
 import { discoverAgents } from "../agents/discovery.ts";
-import { readRepoPlanFile, saveRepoPlanFile } from "../planning/planFile.ts";
+import { readRepoPlanFile, repoPlanDisplayPath, saveRepoPlanFile } from "../planning/planFile.ts";
 import { CancelRun, type CancelSession } from "../runtime/cancelRun.ts";
 import { formatMutationWarning, MutationTripwire } from "../runtime/mutationTripwire.ts";
 import { getFinalOutput, getResultOutput, isFailedResult, type SingleResult } from "../runtime/results.ts";
@@ -762,7 +762,7 @@ export async function runImplementationVerification(
 				: outcome.output;
 			try {
 				saveRepoPlanFile(verificationOutput, ctx.cwd, host.getPlanRepoSlug()!, "verification");
-				verificationReportPath = `${CONFIG_DIR_NAME}/mf-plan/${host.getPlanRepoSlug()!}__verification.md`;
+				verificationReportPath = repoPlanDisplayPath(host.getPlanRepoSlug()!, "verification");
 			} catch {
 				// Persisting the report is best-effort; verification proceeds regardless.
 			}
@@ -861,14 +861,14 @@ export async function runImplementationVerification(
 					// Only point at the checklist file when one is actually on disk;
 					// criteria can come from the handoff alone.
 					criteriaFilePath: readRepoPlanFile(ctx.cwd, repoPlanSlug, "criteria")
-						? `${CONFIG_DIR_NAME}/mf-plan/${repoPlanSlug}__criteria.md`
+						? repoPlanDisplayPath(repoPlanSlug, "criteria")
 						: undefined,
 				}),
 				ctx.cwd,
 				repoPlanSlug,
 				"verification-handoff",
 			);
-			handoffPath = `${CONFIG_DIR_NAME}/mf-plan/${repoPlanSlug}__verification-handoff.md`;
+			handoffPath = repoPlanDisplayPath(repoPlanSlug, "verification-handoff");
 		} catch {
 			// Persisting the handoff is best-effort; the exhaustion notification still fires.
 		}
