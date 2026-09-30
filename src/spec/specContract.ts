@@ -250,8 +250,8 @@ function renderArtifactAnswers(answers: SpecAnswer[]): string {
 		const answerLines = (item.answer.trim() || "(no answer — use best judgment)").split(/\r?\n/);
 		return [
 			`${index + 1}. **Q (${item.area}):** ${question}`,
-			`   **A:** ${answerLines[0]}`,
-			...answerLines.slice(1).map((line) => `   ${line}`),
+			"   **A:**",
+			...answerLines.map((line) => `   > ${line}`),
 		].join("\n");
 	}).join("\n\n");
 }
