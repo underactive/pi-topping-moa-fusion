@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Updated all four pi development dependencies from 0.87.0 to 0.99.2.
+
 ## [0.3.0]
 
 ### Added
