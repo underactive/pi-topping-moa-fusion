@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Other sessions no longer run `moa-verifier` as a general-purpose subagent. Earlier versions installed `moa-proposer`, `moa-synthesizer`, and `moa-verifier` into `~/.pi/agent/agents/`, which subagent tools such as pi-subagents' `Agent` scan in every session, so a session outside `/mf-plan` could hand the verifier unrelated work. These three agents are no longer installed, and copies left by earlier versions are removed at session start. MoA runs already loaded them from the extension package, so edits to those copies never took effect.
+
 ## [0.4.1]
 
 ### Added

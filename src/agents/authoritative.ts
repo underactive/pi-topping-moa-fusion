@@ -15,6 +15,14 @@ import { parseAgentFile, type AgentConfig } from "./discovery.ts";
  */
 export const AUTHORITATIVE_MOA_AGENT_NAMES = Object.freeze(["moa-proposer", "moa-synthesizer", "moa-verifier"]);
 
+/**
+ * The user-facing agents seeded into `~/.pi/agent/agents/` for customization.
+ * That directory is shared: every subagent tool scans it in every session
+ * (e.g. pi-subagents' `Agent`), so anything installed there is offered as a
+ * general-purpose agent outside `/mf-plan`.
+ */
+const INSTALLED_AGENT_NAMES = Object.freeze(["moa-explore", "mf-plan", "moa-opinion", "moa-debater"]);
+
 const MAX_WALK_UP_LEVELS = 5;
 
 /**
@@ -67,19 +75,22 @@ export function withAuthoritativeMoaAgents(agents: AgentConfig[], shippedDir: st
 	return result;
 }
 
+/**
+ * Seed the user-facing agents (no-clobber) and remove the protocol-internal
+ * copies earlier versions installed alongside them. MoA runs load the
+ * protocol agents from the bundled `agents/` directory instead — see
+ * withAuthoritativeMoaAgents.
+ */
 export function installShippedAgents(): void {
 	const agentsDir = path.join(getAgentDir(), "agents");
 	fs.mkdirSync(agentsDir, { recursive: true });
 
-	// This still writes user-visible files for direct inspection/customization,
-	// but note `moa-proposer`/`moa-synthesizer` are no longer authoritative at
-	// runtime once written here — see withAuthoritativeMoaAgents.
 	const sourceDir = shippedAgentsDir();
-	for (const name of ["moa-explore.md", "mf-plan.md", "moa-opinion.md", "moa-debater.md", "moa-proposer.md", "moa-synthesizer.md", "moa-verifier.md"]) {
-		const targetPath = path.join(agentsDir, name);
+	for (const name of INSTALLED_AGENT_NAMES) {
+		const targetPath = path.join(agentsDir, `${name}.md`);
 		if (fs.existsSync(targetPath)) continue; // don't clobber
 
-		const sourcePath = path.join(sourceDir, name);
+		const sourcePath = path.join(sourceDir, `${name}.md`);
 		if (fs.existsSync(sourcePath)) {
 			try {
 				fs.copyFileSync(sourcePath, targetPath);
@@ -87,5 +98,36 @@ export function installShippedAgents(): void {
 				// ignore
 			}
 		}
+	}
+
+	removeInstalledAuthoritativeAgents(agentsDir, sourceDir);
+}
+
+/**
+ * Delete installed copies of the protocol-internal agents from `agentsDir`.
+ * Other sessions' subagent tools picked them up there (`moa-verifier` ran for
+ * unrelated verification work), and MoA runs never read them. Only a file that
+ * still declares the agent's own name is removed, and nothing is removed when
+ * `agentsDir` resolves to `shippedDir`, whose files are the bundled definitions.
+ */
+export function removeInstalledAuthoritativeAgents(agentsDir: string, shippedDir: string): void {
+	if (isSameDirectory(agentsDir, shippedDir)) return;
+
+	for (const name of AUTHORITATIVE_MOA_AGENT_NAMES) {
+		const targetPath = path.join(agentsDir, `${name}.md`);
+		try {
+			if (parseAgentFile(targetPath, "user")?.name !== name) continue;
+			fs.unlinkSync(targetPath);
+		} catch {
+			// Malformed frontmatter, or another session removed it first.
+		}
+	}
+}
+
+function isSameDirectory(a: string, b: string): boolean {
+	try {
+		return fs.realpathSync(a) === fs.realpathSync(b);
+	} catch {
+		return false;
 	}
 }

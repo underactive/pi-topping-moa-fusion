@@ -22,8 +22,8 @@ export interface ConfigurableAgent {
 /**
  * The shipped agents whose model the user may choose. `moa-proposer` and
  * `moa-synthesizer` are excluded: their model is assigned per slot at runtime,
- * and withAuthoritativeMoaAgents replaces their on-disk copies wholesale, so
- * any frontmatter written to them would be ignored. `mf-plan` is excluded
+ * and they load from the bundled definitions without ever being installed, so
+ * there is no on-disk frontmatter to write. `mf-plan` is excluded
  * too: it follows the session model chosen when entering plan mode, so a
  * configured default would never be read.
  */

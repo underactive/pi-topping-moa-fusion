@@ -1,9 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { AUTHORITATIVE_MOA_AGENT_NAMES, installShippedAgents, shippedAgentsDir, withAuthoritativeMoaAgents } from "../src/agents/authoritative.ts";
+import {
+	AUTHORITATIVE_MOA_AGENT_NAMES,
+	installShippedAgents,
+	removeInstalledAuthoritativeAgents,
+	shippedAgentsDir,
+	withAuthoritativeMoaAgents,
+} from "../src/agents/authoritative.ts";
+import { discoverAgents } from "../src/agents/discovery.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const agentsSource = readFileSync(path.join(root, "src", "agents", "authoritative.ts"), "utf8");
@@ -29,7 +36,9 @@ assert.match(debaterAgent, /\*\*Stance:\*\*/);
 assert.match(debaterAgent, /read-only/i);
 
 // The opinion agent is installed for customization, but remains outside the
-// protocol-authoritative overlay.
+// protocol-authoritative overlay. The protocol agents are never installed:
+// every subagent tool scans that directory in every session, so an installed
+// moa-verifier was offered as a general-purpose agent outside /mf-plan.
 {
 	const tempRoot = mkdtempSync(path.join(tmpdir(), "moa-opinion-agent-install-"));
 	const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
@@ -38,6 +47,18 @@ assert.match(debaterAgent, /read-only/i);
 		installShippedAgents();
 		assert.equal(readFileSync(path.join(tempRoot, "agents", "moa-opinion.md"), "utf8"), opinionAgent);
 		assert.equal(readFileSync(path.join(tempRoot, "agents", "moa-debater.md"), "utf8"), debaterAgent);
+		for (const name of ["moa-explore", "mf-plan"]) {
+			assert.equal(existsSync(path.join(tempRoot, "agents", `${name}.md`)), true, `${name} is installed`);
+		}
+		for (const name of AUTHORITATIVE_MOA_AGENT_NAMES) {
+			assert.equal(existsSync(path.join(tempRoot, "agents", `${name}.md`)), false, `${name} must not be installed`);
+		}
+
+		// MoA runs still resolve every protocol agent, from the bundled definitions.
+		const resolved = withAuthoritativeMoaAgents(discoverAgents(tempRoot, "user").agents, dir);
+		for (const name of AUTHORITATIVE_MOA_AGENT_NAMES) {
+			assert.equal(resolved.find((a) => a.name === name)?.filePath, path.join(dir, `${name}.md`));
+		}
 	} finally {
 		if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
 		else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
@@ -127,6 +148,78 @@ function baseDiscovery() {
 	assert.equal(overlaid.length, 1);
 	assert.equal(overlaid.some((a) => a.name === "moa-synthesizer"), false);
 	assert.equal(overlaid[0].name, "moa-explore");
+}
+
+// ── Protocol agents installed by earlier versions are removed ───────────────
+// Only files that still declare the protocol agent's name; a customized
+// user-facing agent and files that are not ours stay.
+{
+	const tempRoot = mkdtempSync(path.join(tmpdir(), "moa-installed-agent-cleanup-"));
+	const agentsDir = path.join(tempRoot, "agents");
+	const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+	try {
+		mkdirSync(agentsDir, { recursive: true });
+		writeFileSync(path.join(agentsDir, "moa-verifier.md"), readFileSync(path.join(dir, "moa-verifier.md"), "utf8"));
+		writeFileSync(
+			path.join(agentsDir, "moa-synthesizer.md"),
+			`---\nname: moa-synthesizer\ndescription: stale installed copy\n---\n\n${staleSynthesizerPrompt}\n`,
+		);
+		const foreignProposer = "---\nname: my-proposer\ndescription: Another agent reusing the filename.\n---\n\nCustom prompt.\n";
+		writeFileSync(path.join(agentsDir, "moa-proposer.md"), foreignProposer);
+		const customExplore = "---\nname: moa-explore\ndescription: Customized explore agent.\n---\n\nCustom explore instructions.\n";
+		writeFileSync(path.join(agentsDir, "moa-explore.md"), customExplore);
+		const unrelated = "---\nname: moa-red-team\ndescription: Installed by another package.\n---\n\nNot ours.\n";
+		writeFileSync(path.join(agentsDir, "moa-red-team.md"), unrelated);
+
+		process.env.PI_CODING_AGENT_DIR = tempRoot;
+		installShippedAgents();
+
+		assert.equal(existsSync(path.join(agentsDir, "moa-verifier.md")), false, "an installed moa-verifier is removed");
+		assert.equal(existsSync(path.join(agentsDir, "moa-synthesizer.md")), false, "a stale moa-synthesizer is removed");
+		assert.equal(readFileSync(path.join(agentsDir, "moa-proposer.md"), "utf8"), foreignProposer);
+		assert.equal(readFileSync(path.join(agentsDir, "moa-explore.md"), "utf8"), customExplore);
+		assert.equal(readFileSync(path.join(agentsDir, "moa-red-team.md"), "utf8"), unrelated);
+	} finally {
+		if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+		rmSync(tempRoot, { recursive: true, force: true });
+	}
+}
+
+// ── Removal never deletes the bundled definitions, and never throws ────────
+{
+	const tempRoot = mkdtempSync(path.join(tmpdir(), "moa-installed-agent-guards-"));
+	try {
+		const bundled = path.join(tempRoot, "bundled");
+		mkdirSync(bundled);
+		for (const name of AUTHORITATIVE_MOA_AGENT_NAMES) {
+			writeFileSync(path.join(bundled, `${name}.md`), readFileSync(path.join(dir, `${name}.md`), "utf8"));
+		}
+
+		// An agent dir that resolves to the bundled dir is skipped entirely.
+		const linkedDir = path.join(tempRoot, "linked-agents");
+		symlinkSync(bundled, linkedDir, "dir");
+		removeInstalledAuthoritativeAgents(linkedDir, bundled);
+		for (const name of AUTHORITATIVE_MOA_AGENT_NAMES) {
+			assert.equal(existsSync(path.join(bundled, `${name}.md`)), true, `bundled ${name} survives a linked agent dir`);
+		}
+
+		// A per-file link into the bundled dir is itself removed; its target stays.
+		const agentsDir = path.join(tempRoot, "agents");
+		mkdirSync(agentsDir);
+		symlinkSync(path.join(bundled, "moa-verifier.md"), path.join(agentsDir, "moa-verifier.md"));
+		removeInstalledAuthoritativeAgents(agentsDir, bundled);
+		assert.equal(existsSync(path.join(agentsDir, "moa-verifier.md")), false);
+		assert.equal(existsSync(path.join(bundled, "moa-verifier.md")), true);
+
+		// Malformed frontmatter is skipped rather than thrown out of session_start.
+		const broken = "---\nname: moa-verifier\ndescription: [unterminated\n---\n\nBody.\n";
+		writeFileSync(path.join(agentsDir, "moa-verifier.md"), broken);
+		assert.doesNotThrow(() => removeInstalledAuthoritativeAgents(agentsDir, bundled));
+		assert.equal(readFileSync(path.join(agentsDir, "moa-verifier.md"), "utf8"), broken);
+	} finally {
+		rmSync(tempRoot, { recursive: true, force: true });
+	}
 }
 
 console.log("MoA authoritative-agent overlay tests passed.");

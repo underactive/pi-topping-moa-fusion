@@ -29,6 +29,9 @@ const { getRepoPlanDirectory } = await import("../src/planning/planFile.ts");
 const { default: mfPlanExtension } = await import("../src/index.ts");
 
 const tempRoot = mkdtempSync(path.join(tmpdir(), "moa-implementation-retry-test-"));
+// session_start installs and removes agent files, so keep it off the real ~/.pi/agent.
+const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+process.env.PI_CODING_AGENT_DIR = path.join(tempRoot, "agent");
 
 try {
 	// 1. implementationTurnFailed tests
@@ -298,5 +301,7 @@ try {
 
 	console.log("All implementation-retry unit and lifecycle tests passed!");
 } finally {
+	if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+	else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
 	rmSync(tempRoot, { recursive: true, force: true });
 }

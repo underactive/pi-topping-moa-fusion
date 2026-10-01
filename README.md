@@ -99,7 +99,7 @@ Several safeguards target known LLM judging biases:
 - **Auditable reasoning** — the plan opens with a Context section recording dimension reasoning, proposer alignment, and synthesis decisions, so recombination choices are inspectable. `### Proposer alignment` labels support as evidence-backed or asserted, and conflict recommendation Details lines include distinct-model support counts. Reconciliation commentary is confined there; the rest reads as one coherent plan. The orchestrator verifies all three subsections are present and rejects a first plan that omits them (one corrective retry, then a warning), the same way it enforces `## Proposer Verdicts`.
 - **Disagreements go to the user** — every substantive disagreement must be emitted as a `## Conflicts` block, even when the synthesizer is confident, so its judgment is a default you can override rather than a decision made for you. Genuine ambiguity about *your intent* instead produces a single `## Open Question`, and the synthesizer is re-run with your answer.
 
-**Protocol-internal, always current at runtime.** The proposer, synthesizer, and verifier prompts are tightly coupled to this extension's parsers and UI (e.g. the `## Conflicts` markup, and the verifier's `**Verdict:**`/`### Gaps` markup). A hand-edited copy under `~/.pi/agent/agents/` is still written for inspection, but MoA runs always use the bundled definition from the installed extension, so a protocol update can never desync from what the subprocess runs. `moa-explore` and `mf-plan` remain fully user-customizable.
+**Protocol-internal, always current at runtime.** The proposer, synthesizer, and verifier prompts are tightly coupled to this extension's parsers and UI (e.g. the `## Conflicts` markup, and the verifier's `**Verdict:**`/`### Gaps` markup). MoA runs always load them from the installed extension's bundled `agents/` directory, so a protocol update can never desync from what the subprocess runs. They are never installed into `~/.pi/agent/agents/`: subagent tools in every session scan that directory and would offer them as general-purpose agents outside `/mf-plan`. Copies left there by earlier versions are removed at session start. `moa-explore` and `mf-plan` remain fully user-customizable.
 
 ### Implementation failures
 
@@ -234,7 +234,7 @@ All four tools declare pi 0.99 `annotations`, and none claims to be read-only: `
 
 ## Subagents
 
-Seven agent definitions are auto-installed to `~/.pi/agent/agents/` on first run (won't overwrite existing files). Two belong to the single-model workflow, three to MoA planning, one to the independent opinion flow, and one to the debate flow:
+Seven agent definitions ship with the extension. Two belong to the single-model workflow, three to MoA planning, one to the independent opinion flow, and one to the debate flow. The four outside MoA planning (`moa-explore`, `mf-plan`, `moa-opinion`, `moa-debater`) are auto-installed to `~/.pi/agent/agents/` on first run (won't overwrite existing files). The three MoA agents always load from the extension itself and are never installed (see [How the synthesizer works](#how-the-synthesizer-works)):
 
 | Agent | Workflow | Role | Model & thinking come from |
 |-------|----------|------|----------------------------|
