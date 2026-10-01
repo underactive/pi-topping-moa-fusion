@@ -2,9 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- `write_plan`, `enter_plan_mode`, `exit_plan_mode`, and `mf_plan_subagent` now declare a pi 0.99 `outputSchema` and return matching `structuredContent` for RPC/JSON consumers, `tool_result` handlers, and codemode scripts: per-agent status, exit code, stop reason, usage, and capped output for subagent runs, and the approval outcome and kickoff route for plan exit. Model-facing text is unchanged.
+- The same four tools now declare MCP-style `annotations`, so permission extensions see accurate destructive and idempotent hints. None claims to be read-only.
+
 ### Changed
 
 - Updated all four pi development dependencies from 0.87.0 to 0.99.2.
+- Plan-only tools stay out of normal mode by being removed from the active tool set, not through pi 0.99's `prepareLoadout`, which leaves hidden tools active and callable.
+
+### Fixed
+
+- Plan-only tools are now also removed on the first turn after leaving plan mode. Previously the exit-reminder turn skipped the leak repair, so a leaked `write_plan`, `exit_plan_mode`, or `mf_plan_subagent` stayed declared for that turn.
 
 ## [0.3.0]
 

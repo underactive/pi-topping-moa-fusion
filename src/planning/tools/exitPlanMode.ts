@@ -10,6 +10,7 @@ import { showPlanReview } from "../../ui/planReviewOverlay.ts";
 import { planNamingOverlay, withWorkingOverlay } from "../../ui/workingOverlay.ts";
 import { ASK_USER_QUESTION_PENDING_MESSAGE } from "../askUserQuestion.ts";
 import { getPlan, getPlanFilePath, saveRepoPlanFile, slugifyPlanName, writePlan } from "../planFile.ts";
+import { EXIT_PLAN_MODE_OUTPUT_SCHEMA, type ExitPlanModeStructuredResult } from "./structuredResults.ts";
 
 import type { ImplementationHandoff } from "../../moa/implementationRetry.ts";
 
@@ -35,6 +36,10 @@ export function registerExitPlanModeTool(pi: ExtensionAPI, host: ExitPlanModeHos
 		label: "Exit Plan Mode",
 		description: "Use when you are in plan mode and have finished writing your plan to the plan file and are ready for user approval. Reads the plan from the plan file — does NOT take plan content as a parameter. Only use for tasks that require writing code; not for pure research.",
 		parameters: Type.Object({}),
+		outputSchema: EXIT_PLAN_MODE_OUTPUT_SCHEMA,
+		// Restores tools and env and queues implementation; the edit branch and the
+		// non-TUI approve overwrite plan files, and every call reopens approval.
+		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
 		// exit_plan_mode opens a model/UI surface the model may not have asked
 		// the user about yet; marking it sequential means a same-message
 		// ask_user_question resolves first, so approval never lands on unread
@@ -52,6 +57,14 @@ export function registerExitPlanModeTool(pi: ExtensionAPI, host: ExitPlanModeHos
 
 			const plan = getPlan();
 			const filePath = getPlanFilePath();
+			// Read at return time: the slug may be named during this call.
+			const structuredResult = (
+				status: ExitPlanModeStructuredResult["status"],
+				kickoff: ExitPlanModeStructuredResult["kickoff"],
+			): ExitPlanModeStructuredResult => {
+				const repoPlanSlug = host.getPlanRepoSlug();
+				return { status, planFilePath: filePath, headless: !ctx.hasUI, kickoff, ...(repoPlanSlug ? { repoPlanSlug } : {}) };
+			};
 
 			if (!plan || plan.trim() === "") {
 				return {
@@ -95,6 +108,7 @@ export function registerExitPlanModeTool(pi: ExtensionAPI, host: ExitPlanModeHos
 							text: buildImplementationKickoffMessage(plan, filePath),
 						},
 					],
+					structuredContent: structuredResult("approved", "inline"),
 				};
 			}
 
@@ -154,10 +168,15 @@ export function registerExitPlanModeTool(pi: ExtensionAPI, host: ExitPlanModeHos
 					return {
 						details: undefined,
 						content: [{ type: "text", text: "Plan approved and saved. Plan mode has exited. Stop here — do not write files, run commands, or call any tools in this turn. A follow-up message will tell you to begin implementation." }],
+						structuredContent: structuredResult("approved", "follow_up"),
 					};
 				}
 
-				return { content: [{ type: "text", text: "User wants to keep refining the plan. Continue working on the plan file and call exit_plan_mode when ready." }], details: undefined };
+				return {
+					content: [{ type: "text", text: "User wants to keep refining the plan. Continue working on the plan file and call exit_plan_mode when ready." }],
+					details: undefined,
+					structuredContent: structuredResult("keep_planning", "none"),
+				};
 			}
 		},
 	});

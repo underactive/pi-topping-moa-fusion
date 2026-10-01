@@ -17,6 +17,7 @@ import { parseRef as parseModelRefLabel, type ThinkingLevel } from "../../shared
 import { activityLoopCount } from "../../ui/agentStatus.ts";
 import { showCancelOverlay } from "../../ui/cancelOverlay.ts";
 import { PLAN_SUBAGENT_NAMES } from "./shared.ts";
+import { buildSubagentStructuredResult, MF_PLAN_SUBAGENT_OUTPUT_SCHEMA } from "./structuredResults.ts";
 
 const CANCEL_HINT_WIDGET_KEY = "mf-plan-cancel";
 
@@ -38,7 +39,18 @@ export interface MfPlanSubagentHost {
 	setActiveCancelSession(session: CancelSession | undefined): void;
 }
 
-export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagentHost): void {
+/**
+ * Test-only runner seam. The defaults are the real subprocess runners, which
+ * apply the read-only --tools allowlist and the provider env handshake.
+ */
+export type MfPlanSubagentDeps = {
+	runSingleAgent?: typeof runSingleAgent;
+	runParallelAgents?: typeof runParallelAgents;
+};
+
+export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagentHost, deps: MfPlanSubagentDeps = {}): void {
+	const runSingle = deps.runSingleAgent ?? runSingleAgent;
+	const runParallel = deps.runParallelAgents ?? runParallelAgents;
 	pi.registerTool({
 		name: "mf_plan_subagent",
 		label: "Moa Plan Subagent",
@@ -51,6 +63,11 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 			`Default scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
 		].join(" "),
 
+		outputSchema: MF_PLAN_SUBAGENT_OUTPUT_SCHEMA,
+		// Installs agent files, writes temp prompts, and spawns paid subprocesses
+		// whose read-only boundary is cooperative (hence the tripwire), so no
+		// read-only claim; every call starts new, nondeterministic runs.
+		annotations: { readOnlyHint: false, idempotentHint: false },
 		// mf_plan_subagent can share a message with ask_user_question; marking it
 		// sequential means the questionnaire resolves first so its overlay never
 		// draws over a live questionnaire.
@@ -184,7 +201,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 						...agentExtensionOptions(t.agent),
 						signal: run.add(`${t.agent} #${i + 1}`, signal).signal,
 					}));
-					const results = await runParallelAgents(
+					const results = await runParallel(
 						ctx.cwd,
 						agents,
 						taskList,
@@ -208,7 +225,9 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 					);
 
 					// resolveOnAbort makes the runner resolve on abort; rethrow so a
-					// whole-turn abort (pi's ESC) keeps its original semantics.
+					// whole-turn abort (pi's ESC) keeps its original semantics, which also
+					// means it carries no structured result. A child abort the user did not
+					// ask for is reported per agent as "aborted".
 					if (signal?.aborted) throw new Error("Subagent was aborted");
 
 					const successCount = results.filter((r) => !isFailedResult(r)).length;
@@ -223,6 +242,8 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 					});
 
 					const header = `Parallel: ${successCount}/${results.length} succeeded${cancelledCount > 0 ? `, ${cancelledCount} cancelled by user` : ""}`;
+					// Subagent usage stays out of the tool result's `usage` so session
+					// token accounting is unchanged; it is reported per agent instead.
 					return {
 						details: undefined,
 						content: [
@@ -231,6 +252,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 								text: `${header}\n\n${summaries.join("\n\n---\n\n")}`,
 							},
 						],
+						structuredContent: buildSubagentStructuredResult("parallel", results),
 					};
 				} finally {
 					unsubscribeF4?.();
@@ -261,7 +283,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 					: undefined;
 				setCancelHint(ctx, "f4: cancel mf-plan agent");
 				try {
-					const result = await runSingleAgent(
+					const result = await runSingle(
 						ctx.cwd,
 						agents,
 						params.agent!,
@@ -277,22 +299,26 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 
 					if (signal?.aborted) throw new Error("Subagent was aborted");
 
+					const structuredContent = buildSubagentStructuredResult("single", [result]);
 					if (result.cancelled) {
 						return {
 							details: undefined,
 							content: [{ type: "text", text: "The user cancelled this subagent. Do not retry; continue planning with the information you already have." }],
+							structuredContent,
 						};
 					}
 					if (isFailedResult(result)) {
 						return {
 							details: undefined,
 							content: [{ type: "text", text: `Agent failed: ${getResultOutput(result)}` }],
+							structuredContent,
 							isError: true,
 						};
 					}
 					return {
 						details: undefined,
 						content: [{ type: "text", text: getFinalOutput(result.messages) || "(no output)" }],
+						structuredContent,
 					};
 				} finally {
 					unsubscribeF4?.();

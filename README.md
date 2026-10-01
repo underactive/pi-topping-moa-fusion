@@ -230,6 +230,8 @@ Outside plan mode, one additional tool is exposed:
 |------|-------------|
 | `enter_plan_mode` | Lets the agent enter plan mode itself when asked for a design or plan. Takes the single-model path on the current session model — no pickers, no MoA. Exit and approval work exactly as if the user had invoked `/mf-plan`. |
 
+All four tools declare pi 0.99 `annotations`, and none claims to be read-only: `write_plan` is `destructiveHint: true, idempotentHint: true`, `exit_plan_mode` is `destructiveHint: true, idempotentHint: false`, `mf_plan_subagent` is `idempotentHint: false`, and `enter_plan_mode` sets only `readOnlyHint: false`. Under the example permission policy in pi's extension docs they are confirmed exactly as before. Each also declares an `outputSchema` and returns matching `structuredContent` for programmatic consumers (RPC/JSON `tool_execution_end` events, `tool_result` handlers, and codemode scripts); for `mf_plan_subagent` that is each agent's status, exit code, stop reason, usage, and output capped at 50 KB. The model-facing text is unchanged, and pi does not save structured values in the session.
+
 ## Subagents
 
 Seven agent definitions are auto-installed to `~/.pi/agent/agents/` on first run (won't overwrite existing files). Two belong to the single-model workflow, three to MoA planning, one to the independent opinion flow, and one to the debate flow:

@@ -12,9 +12,10 @@ import { modelRefLabel, TRIGGER_TURN, type ModelRef, type ThinkingLevel } from "
 import { showMoaModelPicker, showImplementingModelPicker } from "../../ui/moaModelPicker.ts";
 import { showMoaSetup } from "../../ui/moaSetupOverlay.ts";
 import { showPromptEditor } from "../../ui/promptEditor.ts";
-import { getPlan } from "../planFile.ts";
+import { getPlan, getPlanFilePath } from "../planFile.ts";
 import { isAskUserQuestionInstalled } from "../askUserQuestion.ts";
 import { buildPlanModeInstructions, buildPlanModeReentryInstructions } from "../instructions.ts";
+import { ENTER_PLAN_MODE_OUTPUT_SCHEMA } from "./structuredResults.ts";
 
 export interface InteractivePlanModeHost {
 	beginInteractive(ctx: ExtensionContext): void;
@@ -136,6 +137,11 @@ export function registerEnterPlanModeTool(pi: ExtensionAPI, host: EnterPlanModeH
 				Type.String({ description: "Short description of what is being planned (used to name the plan file)" }),
 			),
 		}),
+		outputSchema: ENTER_PLAN_MODE_OUTPUT_SCHEMA,
+		// Swaps the active tools and provider env, persists state, and with a
+		// plan_prompt writes the prompt record under .pi/mf-plan/. Not read-only;
+		// destructive is left at the default because that write can overwrite.
+		annotations: { readOnlyHint: false },
 		// enter_plan_mode is paired with a same-message ask_user_question only in
 		// the single-model path; marking it sequential means the questionnaire
 		// resolves first, so mf-plan's own overlays never draw over it.
@@ -159,6 +165,7 @@ export function registerEnterPlanModeTool(pi: ExtensionAPI, host: EnterPlanModeH
 					type: "text",
 					text: `Plan mode enabled (single model — the current session model). Mutating tools are disabled until your plan is approved via exit_plan_mode.\n\n${instructions}`,
 				}],
+				structuredContent: { status: "entered", mode: "single", reentry, planFilePath: getPlanFilePath() },
 			};
 		},
 	});

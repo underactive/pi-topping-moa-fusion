@@ -286,6 +286,32 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		applyReadOnlyProviderEnv();
 		pi.setActiveTools(getPlanModeTools(toolsBeforePlanMode));
 	};
+	/**
+	 * Plan-only tools are kept out of normal mode by removing them from the
+	 * active set, not with pi 0.99's `prepareLoadout` / `hiddenDeclarations`:
+	 * - Hidden tools stay active. `getActiveTools()` would always list
+	 *   write_plan, exit_plan_mode, and mf_plan_subagent, so the contamination
+	 *   checks in `enablePlanModeTools` and `validateToolLoadoutSnapshot` would
+	 *   treat every loadout as poisoned and swap the user's real one for
+	 *   `fullLoadoutFallback()` on every entry and resume, contradicting
+	 *   plan-tool-leak and plan-resume-tool-restore.
+	 * - Hidden tools stay callable. pi rejects calls to inactive tools; a hidden
+	 *   one would run with only its `isEnabled` guard in the way. It cannot
+	 *   replace the plan-mode read-only narrowing either: hidden bash/edit/write
+	 *   would still run.
+	 * - The hook runs only while its host tool is active. Outside plan mode that
+	 *   is enter_plan_mode alone; drop it via --tools or the tool picker and all
+	 *   three declarations leak.
+	 * - After resume or /tree, 0.99.2 strips the hidden declarations only while
+	 *   the host tool is active. The model still sees the plan-only tools when
+	 *   the host is inactive, on pre-0.99 hosts (peerDependencies are "*" and
+	 *   they ignore the hook), and through earlier tool calls in history, which
+	 *   the projection does not filter.
+	 * - A capability gate would only add surface: older hosts still need this
+	 *   path, so both mechanisms would ship.
+	 * - The saving is two tool-change deltas per planning round, and this is
+	 *   already a no-op when the set is clean.
+	 */
 	const deactivatePlanOnlyTools = (): void => {
 		const active = pi.getActiveTools();
 		const filtered = active.filter((name) => !PLAN_ONLY_REGISTERED_TOOLS.includes(name));
@@ -696,6 +722,9 @@ export function createPlanModeController(pi: ExtensionAPI) {
 		onBeforeAgentStart: async () => {
 			if (needsExitReminder) {
 				needsExitReminder = false;
+				// The reminder turn is also the first normal-mode turn: repair a
+				// leaked plan-only loadout here too, not from the next turn on.
+				if (!planModeEnabled) deactivatePlanOnlyTools();
 				persistState();
 				return { message: { customType: PLAN_EXIT_CONTEXT_TYPE, content: buildPlanModeExitInstructions(), display: false } };
 			}
