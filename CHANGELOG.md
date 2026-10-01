@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.1]
+
 ### Added
 
 - `write_plan`, `enter_plan_mode`, `exit_plan_mode`, and `mf_plan_subagent` now declare a pi 0.99 `outputSchema` and return matching `structuredContent` for RPC/JSON consumers, `tool_result` handlers, and codemode scripts: per-agent status, exit code, stop reason, usage, and capped output for subagent runs, and the approval outcome and kickoff route for plan exit. Model-facing text is unchanged.
