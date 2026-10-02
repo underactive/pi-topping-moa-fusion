@@ -61,6 +61,7 @@ export function registerMfPlanSubagentTool(pi: ExtensionAPI, host: MfPlanSubagen
 			"Modes: single (agent + task), parallel (tasks array).",
 			"Agents: moa-explore (fast codebase recon), mf-plan (implementation planning).",
 			`Default scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
+			"Returns { mode, status, total, succeeded, failed, cancelled, aborted, results }; results is an array of { agent, status, exitCode, stopReason?, model?, output, truncated, usage }.",
 		].join(" "),
 
 		outputSchema: MF_PLAN_SUBAGENT_OUTPUT_SCHEMA,

@@ -106,6 +106,23 @@ try {
 	assert.ok(!handlers.has("tool_result"), "no tool_result handler is registered");
 	assert.ok(!handlers.has("tool_call"), "no tool_call handler is registered");
 
+	// pi 1.0.0 codemode reduces outputSchema to top-level field names but keeps
+	// the description verbatim, so mf_plan_subagent restates its nested shape there.
+	{
+		const fieldList = (schema) => Object.keys(schema.properties)
+			.map((name) => (schema.required?.includes(name) ? name : `${name}?`))
+			.join(", ");
+		const { description } = tools.get("mf_plan_subagent");
+		assert.ok(
+			description.includes(`Returns { ${fieldList(MF_PLAN_SUBAGENT_OUTPUT_SCHEMA)} }`),
+			`mf_plan_subagent description names its top-level result fields: ${description}`,
+		);
+		assert.ok(
+			description.includes(`results is an array of { ${fieldList(MF_PLAN_SUBAGENT_OUTPUT_SCHEMA.properties.results.items)} }`),
+			`mf_plan_subagent description names its results[] entry fields: ${description}`,
+		);
+	}
+
 	await handlers.get("session_start")({}, headlessCtx);
 
 	// write_plan outside plan mode: plain error.

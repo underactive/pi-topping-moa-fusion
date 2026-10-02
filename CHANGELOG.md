@@ -2,9 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Verified compatibility with pi 1.0.0: no pi export this extension imports was removed or changed, and typecheck and the full test suite pass against 1.0.0.
+- Updated all four pi development dependencies from 0.99.2 to 1.0.0.
+
 ### Fixed
 
 - Other sessions no longer run `moa-verifier` as a general-purpose subagent. Earlier versions installed `moa-proposer`, `moa-synthesizer`, and `moa-verifier` into `~/.pi/agent/agents/`, which subagent tools such as pi-subagents' `Agent` scan in every session, so a session outside `/mf-plan` could hand the verifier unrelated work. These three agents are no longer installed, and copies left by earlier versions are removed at session start. MoA runs already loaded them from the extension package, so edits to those copies never took effect.
+- The `mf_plan_subagent` tool description now states its structured result shape, including the fields of each `results` entry. pi 1.0.0 codemode shortens each tool's declared output to one line of top-level field names, which left `results` as a bare name; the tool description is the one part of that summary kept verbatim, so script authors see the nested shape without calling `describeTool()`. The structured result itself is unchanged.
 
 ## [0.4.1]
 
