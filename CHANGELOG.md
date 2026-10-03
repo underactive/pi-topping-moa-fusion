@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.2]
+
 ### Changed
 
 - Verified compatibility with pi 1.0.0: no pi export this extension imports was removed or changed, and typecheck and the full test suite pass against 1.0.0.
