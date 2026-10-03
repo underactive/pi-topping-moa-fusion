@@ -221,10 +221,14 @@ export async function runImplementationRetryFlow(
 		"Continue manually",
 	];
 
-	const selection = await ctx.ui.select(
+	const widget = host.getActiveProgressWidget();
+	const selection = await (widget?.whileWaitingForUser?.(() => ctx.ui.select(
 		"Implementation failed — the plan is still available. What next?",
 		options,
-	);
+	)) ?? ctx.ui.select(
+		"Implementation failed — the plan is still available. What next?",
+		options,
+	));
 
 	if (!selection || selection === "Continue manually") {
 		host.stopActiveProgressWidget();
@@ -246,11 +250,15 @@ export async function runImplementationRetryFlow(
 	}
 
 	if (selection === "Choose a different model") {
-		const newSelection = await showImplementingModelPicker(
+		const newSelection = await (widget?.whileWaitingForUser?.(() => showImplementingModelPicker(
 			ctx,
 			host.currentThinkingLevel(),
 			"Implementation failed — choose a different model",
-		);
+		)) ?? showImplementingModelPicker(
+			ctx,
+			host.currentThinkingLevel(),
+			"Implementation failed — choose a different model",
+		));
 
 		if (!newSelection) {
 			// User cancelled model picker; re-run retry flow
@@ -271,7 +279,6 @@ export async function runImplementationRetryFlow(
 		host.setImplementationHandoff(updatedHandoff);
 		host.markImplementationPending(ctx);
 
-		const widget = host.getActiveProgressWidget();
 		if (widget) {
 			const moaInfo = host.getActiveRunMoaInfo();
 			widget.setPhaseModels({

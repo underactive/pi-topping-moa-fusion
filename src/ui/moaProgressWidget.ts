@@ -215,6 +215,8 @@ export interface MoaProgressView {
 	phaseModels(): PhaseModels;
 	/** The phase currently highlighted in the band; undefined highlights none. */
 	activePhase(): MoaPhase | undefined;
+	/** Total active run time, excluding periods paused for user input. */
+	totalElapsedMs(now?: number): number;
 }
 
 export interface MoaProgressCallbacks {
@@ -258,6 +260,12 @@ export class MoaProgressWidget implements MoaProgressView {
 	private tableMounted = false;
 	private showPreview = true;
 	private requestRender: (() => void) | undefined;
+	/** Accumulated active run time before the current active interval. */
+	private elapsedActiveMs = 0;
+	/** Start of the current active interval; undefined while waiting for user input. */
+	private elapsedActiveSince: number | undefined;
+	/** Nested pause ownership (table unmount plus an explicit prompt may overlap). */
+	private elapsedPauseDepth = 0;
 
 	constructor(
 		ctx: ExtensionContext,
@@ -288,6 +296,8 @@ export class MoaProgressWidget implements MoaProgressView {
 
 	private mountTable(): void {
 		if (this.tableMounted) return;
+		if (this.elapsedActiveSince === undefined && this.elapsedPauseDepth === 0) this.elapsedActiveSince = Date.now();
+		else this.resumeElapsed();
 		this.tableMounted = true;
 		this.ui.setWidget(WIDGET_KEY, (tui, theme) => {
 			this.requestRender = () => tui.requestRender();
@@ -297,6 +307,7 @@ export class MoaProgressWidget implements MoaProgressView {
 
 	private unmount(): void {
 		if (this.tableMounted) {
+			this.pauseElapsed();
 			this.tableMounted = false;
 			this.callbacks.closeStacked?.();
 		}
@@ -311,6 +322,9 @@ export class MoaProgressWidget implements MoaProgressView {
 	 */
 	startFanout(refs: ModelRef[], thinking: (ThinkingLevel | undefined)[] = [], maxConcurrency = refs.length): void {
 		const startedAt = Date.now();
+		this.elapsedActiveMs = 0;
+		this.elapsedActiveSince = startedAt;
+		this.elapsedPauseDepth = 0;
 		const activeCount = Number.isFinite(maxConcurrency) ? Math.max(1, Math.floor(maxConcurrency)) : refs.length;
 		this.statuses = refs.map((ref, index) => ({
 			ref,
@@ -339,6 +353,35 @@ export class MoaProgressWidget implements MoaProgressView {
 
 	activePhase(): MoaPhase | undefined {
 		return this.active;
+	}
+
+	/** Pause the run clock while a prompt, picker, or questionnaire waits on the user. */
+	pauseElapsed(now = Date.now()): void {
+		this.elapsedPauseDepth++;
+		if (this.elapsedPauseDepth !== 1 || this.elapsedActiveSince === undefined) return;
+		this.elapsedActiveMs += Math.max(0, now - this.elapsedActiveSince);
+		this.elapsedActiveSince = undefined;
+	}
+
+	/** Resume one pause owner; the clock restarts after the outermost wait ends. */
+	resumeElapsed(now = Date.now()): void {
+		if (this.elapsedPauseDepth === 0) return;
+		this.elapsedPauseDepth--;
+		if (this.elapsedPauseDepth === 0) this.elapsedActiveSince = now;
+	}
+
+	/** Run one user interaction without charging its wall time to the run total. */
+	async whileWaitingForUser<T>(task: () => Promise<T>): Promise<T> {
+		this.pauseElapsed();
+		try {
+			return await task();
+		} finally {
+			this.resumeElapsed();
+		}
+	}
+
+	totalElapsedMs(now = Date.now()): number {
+		return this.elapsedActiveMs + (this.elapsedActiveSince === undefined ? 0 : Math.max(0, now - this.elapsedActiveSince));
 	}
 
 	phaseLabel(phase: MoaPhase): string {
@@ -671,7 +714,7 @@ export class MoaProgressTableComponent implements Component {
 	private readonly timer: ReturnType<typeof setInterval>;
 	private readonly meters: RowMeter[] = [];
 	private readonly previewCache = new Map<number, { revision: number; width: number; lines: string[] }>();
-	private readonly createdAt = Date.now();
+	private readonly animationStartedAt = Date.now();
 	private spinFrame = 0;
 
 	constructor(tui: TUI, theme: ProgressTheme, view: MoaProgressView) {
@@ -760,7 +803,7 @@ export class MoaProgressTableComponent implements Component {
 		const paint = (lit: boolean, text: string): string => {
 			if (!lit) return th.fg("dim", text);
 			return th.getFgAnsi
-				? shimmerString(text, now - this.createdAt, th as ShimmerTheme, "ltr", "normal", true)
+				? shimmerString(text, now - this.animationStartedAt, th as ShimmerTheme, "ltr", "normal", true)
 				: th.fg("text", text);
 		};
 		// Each boundary carries a two-row powerline chevron: the "\" half on the name
@@ -933,7 +976,7 @@ export class MoaProgressTableComponent implements Component {
 		}
 
 		const totalCost = rows.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
-		const totals = `total ${formatCost(totalCost)} · ${formatElapsed(now - this.createdAt)}`;
+		const totals = `total ${formatCost(totalCost)} · ${formatElapsed(this.view.totalElapsedMs(now))}`;
 		lines.push(border("─".repeat(innerWidth)));
 		lines.push(row(`${th.fg("dim", TABLE_FOOTER)}${" ".repeat(Math.max(1, bodyWidth - visibleWidth(TABLE_FOOTER) - visibleWidth(totals)))}${th.fg("dim", totals)}`));
 		lines.push(border("═".repeat(innerWidth)));

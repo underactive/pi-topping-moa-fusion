@@ -154,6 +154,9 @@ export function createPlanModeController(pi: ExtensionAPI) {
 	// than a module singleton so the fake-`pi` tests stay self-contained and no
 	// state leaks across sessions.
 	const askUserQuestionTracker = createAskUserQuestionTracker(pi, () => {
+		const widget = runningProgressWidget ?? activeProgressWidget;
+		if (askUserQuestionTracker.isActive()) widget?.pauseElapsed();
+		else widget?.resumeElapsed();
 		if (lastFooterCtx) updateStatus(lastFooterCtx);
 	});
 	// Subscribe immediately so the blocked flag is live from extension load, not

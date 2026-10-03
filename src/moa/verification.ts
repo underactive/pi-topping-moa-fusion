@@ -471,12 +471,13 @@ export async function runVerificationDecision(deps: {
 		? ["View full findings", "Send verifier findings to the implementer", "Accept implementation as-is"]
 		: ["Send verifier findings to the implementer", "Accept implementation as-is"];
 	while (true) {
-		const choice = await ctx.ui.select(
+		const selectDecision = () => ctx.ui.select(
 			buildVerificationDecisionPrompt(parsed, scriptResults, reportPath, promptWidth),
 			options,
 		);
+		const choice = await (widget?.whileWaitingForUser?.(selectDecision) ?? selectDecision());
 		if (choice === "View full findings") {
-			await showFindings(ctx, report);
+			await (widget?.whileWaitingForUser?.(() => showFindings(ctx, report)) ?? showFindings(ctx, report));
 			continue;
 		}
 		if (choice === "Send verifier findings to the implementer") {
@@ -691,10 +692,13 @@ export async function runImplementationVerification(
 		}
 
 		if (outcome.cancelled) {
-			const choice = await ctx.ui.select(
+			const choice = await (widget?.whileWaitingForUser?.(() => ctx.ui.select(
 				"Verification was cancelled — what next?",
 				["Retry verification", "Skip verification"],
-			);
+			)) ?? ctx.ui.select(
+				"Verification was cancelled — what next?",
+				["Retry verification", "Skip verification"],
+			));
 			if (choice === "Retry verification") return "retry";
 			ctx.ui.notify("Verification skipped. Implementation left as-is.", "warning");
 			finish("cancelled");
@@ -715,10 +719,13 @@ export async function runImplementationVerification(
 		const options = fallbackOption
 			? [fallbackOption, "Retry verification", "Skip verification"]
 			: ["Retry verification", "Skip verification"];
-		const choice = await ctx.ui.select(
+		const choice = await (widget?.whileWaitingForUser?.(() => ctx.ui.select(
 			`Verification could not complete (${verifierLabel}): ${titleReason}`,
 			options,
-		);
+		)) ?? ctx.ui.select(
+			`Verification could not complete (${verifierLabel}): ${titleReason}`,
+			options,
+		));
 		if (fallbackOption && choice === fallbackOption) return "fallback";
 		if (choice === "Retry verification") return "retry";
 		ctx.ui.notify("Verification skipped. Implementation left as-is.", "warning");
@@ -788,10 +795,13 @@ export async function runImplementationVerification(
 				finish("error");
 				return;
 			}
-			const choice = await ctx.ui.select(
+			const choice = await (widget?.whileWaitingForUser?.(() => ctx.ui.select(
 				"The verifier produced no parseable verdict — what next?",
 				["Retry verification", "Skip verification"],
-			);
+			)) ?? ctx.ui.select(
+				"The verifier produced no parseable verdict — what next?",
+				["Retry verification", "Skip verification"],
+			));
 			if (choice === "Retry verification") continue;
 			ctx.ui.notify("Verification inconclusive — implementation left as-is.", "warning");
 			finish("error");

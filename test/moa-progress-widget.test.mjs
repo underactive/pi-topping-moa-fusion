@@ -619,6 +619,43 @@ function makeWidget(mode = "tui", planName = PLAN_NAME) {
 	widget.stopWidget();
 }
 
+// ── total elapsed survives remounts and excludes waits for user input ─────
+{
+	const { widget, current } = makeWidget();
+	widget.startFanout(PROPOSERS);
+	await new Promise((resolve) => setTimeout(resolve, 25));
+	const beforeWait = widget.totalElapsedMs();
+	widget.stopWidget();
+	await new Promise((resolve) => setTimeout(resolve, 25));
+	assert.equal(widget.totalElapsedMs(), beforeWait, "an unmounted prompt does not count as run time");
+
+	widget.switchToSynthesizing(SYNTHESIZER, "synthesizing plan");
+	await new Promise((resolve) => setTimeout(resolve, 25));
+	const afterSynthesis = widget.totalElapsedMs();
+	assert.ok(afterSynthesis > beforeWait, "a later phase resumes the same cumulative clock");
+	widget.settleRoleRow("Synthesize", "done");
+	widget.switchToImplementing(IMPLEMENTER, "implementing plan");
+	widget.settleRoleRow("Implement", "done");
+	widget.switchToVerifying(VERIFIER, "verifying implementation");
+	widget.settleRoleRow("Verify", "done");
+	widget.switchToImplementing(IMPLEMENTER, "addressing verifier findings");
+	assert.ok(widget.totalElapsedMs() >= afterSynthesis, "Verify → Implement does not reset the total");
+
+	const footer = current().render(100).map(strip).at(-2);
+	assert.match(footer, /total .* · 0:00/, "the footer renders cumulative active time");
+	widget.stopWidget();
+}
+
+// ── resumed implementation-only tables start a fresh run clock ───────────
+{
+	const { widget } = makeWidget();
+	widget.switchToImplementing(IMPLEMENTER, "implementing saved plan");
+	const started = widget.totalElapsedMs();
+	await new Promise((resolve) => setTimeout(resolve, 25));
+	assert.ok(widget.totalElapsedMs() > started, "a run reconstructed without fan-out still advances its total");
+	widget.stopWidget();
+}
+
 // ── phase band: all four phases with chevrons at matching columns ─────────
 {
 	const { ctx, current } = fakeCtx("tui", TAGGED_THEME);

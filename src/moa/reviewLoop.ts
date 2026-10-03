@@ -32,27 +32,28 @@ export async function runReviewLoop(options: ReviewLoopOptions): Promise<"done">
 	});
 	host.persistState();
 	let chatRounds = 0;
+	const waitForUser = <T>(task: () => Promise<T>): Promise<T> => widget.whileWaitingForUser?.(task) ?? task();
 
 	while (true) {
 		session.closeOverlay?.();
 		const synthesizer = getSynthesizer();
 		let decision: PlanReviewDecision;
 		if (ctx.mode === "tui") {
-			decision = await showPlanReview(
+			decision = await waitForUser(() => showPlanReview(
 				ctx,
 				currentPlan,
 				{ proposers, synthesizer, proposerPlans, verdictsMarkdown: getLatestVerdicts() ?? undefined },
 				host.getPlanRepoSlug(),
 				chatRounds < MAX_REVIEW_CHAT_ROUNDS,
-			);
+			));
 		} else {
-			const choice = await ctx.ui.select("Exit plan mode?", ["Approve — start implementing", "Keep planning", "Edit plan", "Chat with synthesizer"]);
+			const choice = await waitForUser(() => ctx.ui.select("Exit plan mode?", ["Approve — start implementing", "Keep planning", "Edit plan", "Chat with synthesizer"]));
 			decision = choice?.startsWith("Approve") ? "approve" : choice?.startsWith("Edit") ? "edit" : choice?.startsWith("Chat") ? "chat" : "keep";
 		}
 
 		if (decision === "edit") {
 			session.closeOverlay?.();
-			const edited = await ctx.ui.editor("Edit Plan", currentPlan);
+			const edited = await waitForUser(() => ctx.ui.editor("Edit Plan", currentPlan));
 			if (edited?.trim()) {
 				currentPlan = stripSynthSections(edited.trim());
 				writePlan(currentPlan);
@@ -68,7 +69,7 @@ export async function runReviewLoop(options: ReviewLoopOptions): Promise<"done">
 				continue;
 			}
 			session.closeOverlay?.();
-			const feedback = await ctx.ui.editor("Describe the changes you want:");
+			const feedback = await waitForUser(() => ctx.ui.editor("Describe the changes you want:"));
 			if (!feedback?.trim()) continue;
 			chatRounds++;
 			synthConversation.push(`The user reviewed your synthesized plan and gave this feedback:\n${feedback.trim()}\n\nRevise the plan accordingly and re-emit the complete final plan. Drop any ## Conflicts or ## Open Question sections.`);
@@ -121,7 +122,7 @@ export async function runReviewLoop(options: ReviewLoopOptions): Promise<"done">
 			if (roles?.implementer) {
 				implementationSelection = { ref: roles.implementer, thinking: roles.implementerThinking ?? host.currentThinkingLevel() };
 			} else {
-				implementationSelection = await showImplementingModelPicker(ctx, host.currentThinkingLevel());
+				implementationSelection = await waitForUser(() => showImplementingModelPicker(ctx, host.currentThinkingLevel()));
 			}
 			if (implementationSelection) {
 				await host.applyImplementingSelection(

@@ -338,7 +338,7 @@ None.
 	assert.match(source, /isTui: ctx\.mode === "tui"/, "eligibility for the viewer is TUI-only, not merely hasUI");
 	// Viewing the findings is non-terminal: it opens the read-only popup and
 	// reopens the same selector without touching handoff or completion state.
-	assert.match(source, /if \(choice === "View full findings"\) \{\s*await showFindings\(ctx, report\);\s*continue;\s*\}/, "viewing findings reopens the selector");
+	assert.match(source, /if \(choice === "View full findings"\) \{\s*await \(widget\?\.whileWaitingForUser\?\.\(\(\) => showFindings\(ctx, report\)\) \?\? showFindings\(ctx, report\)\);\s*continue;\s*\}/, "viewing findings reopens the selector without counting the user wait");
 	assert.match(source, /report: verificationReport,/, "the accepted verifier report is retained for the findings popup");
 	assert.match(source, /verificationReport = outcome\.output;/, "the original verifier output is captured verbatim");
 	assert.match(source, /Implementation accepted as-is\./, "the accept path has a brief confirmation");
